@@ -52,19 +52,30 @@ func hash_inputs{keccak_ptr : felt*, range_check_ptr, bitwise_ptr : BitwiseBuilt
     return (h_string_final)
 end
 
-func uint256ToUint384(in : Uint256) -> (out : Uint384):
-    return (out=Uint384(d0=in.high, d1=in.low, d2=0))
+const gx1 = 17117865558768631194064792
+const gx2 = 12501176021340589225372855
+const gx3 = 9198697782662356105779718
+
+const gy1 = 6441780312434748884571320
+const gy2 = 57953919405111227542741658
+const gy3 = 5457536640262350763842127
+
+func get_generator() -> (res : EcPoint):
+    return (res=EcPoint(x=BigInt3(d0=gx1, d1=gx2, d2=gx3), y=BigInt3(d0=gy1, d1=gy2, d2=gy3)))
 end
 
 func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         hash : Uint256, n : felt) -> (success : felt, res : EcPoint):
     alloc_locals
     let two = 2
-    let (x : Uint384) = uint256ToUint384(hash)
+    let x_p = Uint384(d0=hash.high, d1=hash.low, d2=0)
 
-    let (x_cubed) = field_arithmetic_lib.pow(x, Uint384(d0=3, d1=0, d2=0))
-    let (alpha) = field_arithmetic_lib.add(x_cubed, Uint384(d0=7, d1=0, d2=0))
-    let (success, beta) = field_arithmetic_lib.get_square_root(alpha)
+    let (secp_modulus) = get_secp_modulus()
+    let (x_cubed) = field_arithmetic_lib.pow(x_p, Uint384(d0=3, d1=0, d2=0), secp_modulus)
+    let (alpha) = field_arithmetic_lib.add(x_cubed, Uint384(d0=7, d1=0, d2=0), secp_modulus)
+
+    let generator = Uint384(2, 0, 0)
+    let (success, beta) = field_arithmetic_lib.get_square_root(alpha, secp_modulus, generator)
     if success == 1:
         # let (beta_is_zero) = uint384_lib.eq(beta, Uint384(d0=0,d1=0,d2=0))
 
@@ -72,12 +83,25 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         #    return (success=1, res=EcPoint(x=x, y=beta))
         # end
 
-        let (y) = uint384_lib.sub(x, beta)
+        let (y) = uint384_lib.sub(x_p, beta)
 
-        return (success=1, res=EcPoint(x=x, y=y))
+        return (success=1, res=EcPoint(x=x_p, y=y))
     end
 
     return (success=0, res=EcPoint(x=BigInt3(d0=0, d1=0, d2=0), y=BigInt3(d0=0, d1=0, d2=0)))
+end
+
+const thirst_two_bits = ((2 ** 32) - 1)
+const last_thirst_two_bits = ((2 ** 32) - 1)
+# Truncates bits, use only if field_modulus of previous field arithmatic ops is <= 258bits
+func bigint3_to_uint384(in : BigInt3) -> (out : Uint384):
+    alloc_locals
+
+    let limb_one = bitwise_and(in.d1, thirst_two_bits)
+end
+
+func uint256ToUint384(in : Uint256) -> (out : Uint384):
+    return (out=Uint384(d0=in.high, d1=in.low, d2=0))
 end
 
 func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
@@ -121,4 +145,12 @@ func BigInt3_to_64bit{range_check_ptr}(input : BigInt3) -> (
         four=third_highest,
         five=second_lowest,
         six=lowest)
+end
+
+func hash_points{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        H : EcPoint, Gamma : EcPoint, U : EcPoint, V : EcPoint) -> (res : Uint256):
+    alloc_locals
+
+    let two = 2
+    return (res=Uint256(low=0, high=0))
 end
