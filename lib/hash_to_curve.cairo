@@ -10,6 +10,8 @@ from starkware.cairo.common.cairo_keccak.keccak import keccak_bigend, keccak, fi
 from lib.field_arithmetic import field_arithmetic_lib
 from starkware.cairo.common.alloc import alloc
 from lib.uint384_extension import uint384_extension_lib
+from starkware.cairo.common.bitwise import bitwise_and
+from starkware.cairo.common.math import unsigned_div_rem
 
 func get_secp_modulus() -> (secp_modulus : Uint384):
     return (
@@ -91,13 +93,46 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     return (success=0, res=EcPoint(x=BigInt3(d0=0, d1=0, d2=0), y=BigInt3(d0=0, d1=0, d2=0)))
 end
 
-const thirst_two_bits = ((2 ** 32) - 1)
-const last_thirst_two_bits = ((2 ** 32) - 1)
-# Truncates bits, use only if field_modulus of previous field arithmatic ops is <= 258bits
-func bigint3_to_uint384(in : BigInt3) -> (out : Uint384):
+const bigint3_base = 2 ** 86
+const mask_shift = 2 ** 42
+const d1_shift = 2 ** 44
+const d2_shift = 2 ** 84
+
+func bigint3_to_uint384{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : BigInt3) -> (
+        out : Uint384):
     alloc_locals
 
-    let limb_one = bitwise_and(in.d1, thirst_two_bits)
+    let (bottom_d1 : felt) = bitwise_and(in.d1, mask_shift - 1)
+    let d0 = in.d0 + bottom_d1 * bigint3_base
+
+    let (top_d1, _) = unsigned_div_rem(in.d1, mask_shift - 1)
+
+    let (d1_part_two) = bitwise_and(in.d2, d2_shift - 1)
+
+    let d1 = top_d1 + d1_part_two * d1_shift
+
+    let (d2_shifted, _) = unsigned_div_rem(in.d2, d2_shift)
+
+    return (Uint384(d0=d0, d1=d1, d2=d2_shifted))
+end
+
+# Truncates bits, use only if field_modulus of previous field arithmatic ops is <= 258bits
+func uint384_to_bigint3{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : Uint384) -> (
+        out : BigInt3):
+    alloc_locals
+
+    let (d0) = bitwise_and(in.d0, bigint3_base - 1)
+    let (bottom_d1, _) = unsigned_div_rem(in.d0, bigint3_base)
+
+    let (top_d1) = bitwise_and(in.d1, d1_shift - 1)
+
+    let d1 = bottom_d1 + top_d1 * mask_shift
+
+    let (bottom_d2, _) = unsigned_div_rem(in.d1, d1_shift)
+
+    let d2 = bottom_d2 + in.d2 * (2 ** 84)
+    %{ print('d0 ', ids.d0) %}
+    return (BigInt3(d0=d0, d1=d1, d2=d2))
 end
 
 func uint256ToUint384(in : Uint256) -> (out : Uint384):
