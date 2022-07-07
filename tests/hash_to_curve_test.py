@@ -7,6 +7,8 @@ from utils import bytes_32_to_uint_256_little, bytes_32_to_uint_256_little, spli
 async def test_hash_to_fp(hash_to_curve_factory):
    contract = hash_to_curve_factory
    
+   print("empty keccak ", Web3.keccak(b'').hex()[2:])
+   #fe0103032c8c31fc9f990c6b55e3865a184a4ce50e09481f2eaeb3e60ec1cea13a6ae645aa4ba4b304228a9d05087e147c9e86d84c708bbbe62bb35b28dab74492f6c72601
    
    octet = '00'
    #print('fe' + '01' +  octet * 32 + '01' + octet * 7 +'01' + '01' + '01')
@@ -19,7 +21,9 @@ async def test_hash_to_fp(hash_to_curve_factory):
    x = bytes.fromhex(x_string)
 
    y_num = 12345
+   print('y_num',(y_num % 2) + 2)
    y = ((y_num % 2) + 2).to_bytes(1, 'little')
+   print(y)
 
    # alpha is uint 256 - keccak of 012345
    alpha_string = 'aa4ba4b304228a9d05087e147c9e86d84c708bbbe62bb35b28dab74492f6c726'
@@ -45,7 +49,7 @@ async def test_hash_to_fp(hash_to_curve_factory):
    print('split x' , x)
    print(pack(x, 86))
    test_keccak_call = await contract._hash_inputs(
-      suite, (x, (0, 0, 0)), alpha, ctr
+      suite, (x, y), alpha, ctr
    ).call()
 
 
@@ -59,4 +63,4 @@ async def test_hash_to_fp(hash_to_curve_factory):
    print(res)
    assert py_res.hex()[2:] ==  res
 
-   exit()
+   

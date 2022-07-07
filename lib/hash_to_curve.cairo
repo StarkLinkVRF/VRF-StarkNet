@@ -1,5 +1,6 @@
 from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
-from starkware.cairo.common.uint256 import Uint256, split_64, uint256_xor, word_reverse_endian
+from starkware.cairo.common.uint256 import (
+    Uint256, split_64, uint256_xor, word_reverse_endian, uint256_reverse_endian)
 
 from lib.uint384 import Uint384, uint384_lib
 from lib.uint384_extension import Uint768
@@ -37,34 +38,39 @@ func bits64_to_uint256(one : felt, two : felt, three : felt, four : felt) -> (re
     return (res=Uint256(low=one + two * 2 ** 64, high=three + four * 2 ** 64))
 end
 
-const twenty_four_bits = 2 ** 24
+const thirty_two_bits = 2 ** 32
 func split_64_bits{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : felt) -> (
         five_bytes : felt, three_bytes):
     alloc_locals
-    let (three_bytes) = bitwise_and(in, twenty_four_bits - 1)
-    let (five_bytes, _) = unsigned_div_rem(in, twenty_four_bits)
-    return (five_bytes, three_bytes)
+    let (first_four_bytes, _) = unsigned_div_rem(in, thirty_two_bits)
+    let (second_four_bytes) = bitwise_and(in, thirty_two_bits - 1)
+    return (first_four_bytes, second_four_bytes)
 end
 
-const hundred_and_four_bits = 2 ** 104
 func split_128_bits{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : felt) -> (
         five_bytes : felt, three_bytes):
     alloc_locals
-    let (three_bytes) = bitwise_and(in, twenty_four_bits - 1)
-    let (thirteen_bytes, _) = unsigned_div_rem(in, twenty_four_bits)
-    return (thirteen_bytes, three_bytes)
+    let (four_bytes) = bitwise_and(in, thirty_two_bits - 1)
+    let (twelve_bytes, _) = unsigned_div_rem(in, thirty_two_bits)
+    return (twelve_bytes, four_bytes)
 end
 
 func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256, ctr : felt) -> (res : Uint256):
     alloc_locals
 
-    # TODO is y in there?
+    %{
+        def pack(z, num_bits_shift: int = 128) -> int:
+            limbs = (z.d0, z.d1, z.d2)
+            return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
+    %}
 
     let (y_as_uint384) = bigint3_to_uint384(public_key.y)
+    %{ print(pack(ids.y_as_uint384)) %}
     let (_, y_mod_2) = uint384_lib.unsigned_div_rem(y_as_uint384, Uint384(d0=2, d1=0, d2=0))
 
     let y_octet = y_mod_2.d0 + 2
+    %{ print("y_octet", ids.y_octet) %}
 
     let (pk_string_one : felt, pk_string_two : felt, pk_string_three : felt, pk_string_four : felt,
         pk_string_five : felt, pk_string_six : felt) = BigInt3_to_64bit(public_key.x)
@@ -91,26 +97,26 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     # pk_string_one is one byte long
     # each 64 bit segment is split into (3 and 5 bytes) and then are recombined
     # suite_string || one_string || y_octet || pk_string_first_byte || five_bytes_pk_string_two| three_bytes_pk_string_two || five_bytes_pk_string_three...
-    let first_64_bits = str_two_five_bytes + pk_string_one * 2 ** 40 + one_string * 2 ** 48 + suite_string * 2 ** 56
-    let second_64_bits = str_three_five_bytes + str_two_three_bytes * 2 ** 40
+    let first_64_bits = str_two_five_bytes + pk_string_one * 2 ** 32 + y_octet * 2 ** 40 + one_string * 2 ** 48 + suite_string * 2 ** 56
+    let second_64_bits = str_three_five_bytes + str_two_three_bytes * 2 ** 32
 
     let p1 = first_64_bits * 2 ** 64 + second_64_bits
 
     let (str_five_five_bytes, str_five_three_bytes) = split_64_bits(pk_string_five)
     let (str_six_five_bytes, str_six_three_bytes) = split_64_bits(pk_string_six)
 
-    let third_64_bits = str_five_five_bytes + str_three_three_bytes * 2 ** 40
-    let fourth_64_bits = str_six_five_bytes + str_five_three_bytes * 2 ** 40
+    let third_64_bits = str_five_five_bytes + str_three_three_bytes * 2 ** 32
+    let fourth_64_bits = str_six_five_bytes + str_five_three_bytes * 2 ** 32
 
     let p2 = third_64_bits * 2 ** 64 + fourth_64_bits
 
     let (alpha_high_thirteen_bytes, alpha_high_three_bytes) = split_128_bits(alpha.high)
 
-    let p3 = alpha_high_thirteen_bytes + str_six_three_bytes * 2 ** 104
+    let p3 = alpha_high_thirteen_bytes + str_six_three_bytes * 2 ** 96
 
     let (alpha_low_thirteen_bytes, alpha_low_three_bytes) = split_128_bits(alpha.low)
 
-    let p4 = alpha_low_thirteen_bytes + alpha_high_three_bytes * 2 ** 104
+    let p4 = alpha_low_thirteen_bytes + alpha_high_three_bytes * 2 ** 96
 
     let p5 = ctr + alpha_low_three_bytes * 2 ** 8
 
@@ -119,6 +125,13 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     %{ print('p3',ids.p3) %}
     %{ print('p4',ids.p4) %}
     %{ print('p5',ids.p5) %}
+
+    %{
+        p = hex(ids.p1)[2:] +  hex( ids.p2)[2:] + hex(ids.p3)[2:] + hex(ids.p4)[2:] + hex(ids.p5)[2:]
+
+        print("hex res")
+        print(p)
+    %}
 
     let (p1_reverse) = word_reverse_endian(p1)
     let (p1_2, p1_1) = unsigned_div_rem(p1_reverse, 2 ** 64)
@@ -149,17 +162,17 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     assert [h_string + 7] = p4_2
 
     let (p5_reverse) = word_reverse_endian(p5)
-    let (p5_2, p5_1) = unsigned_div_rem(p5_reverse, 2 ** 96)
+    let (p5_2, p5_1) = unsigned_div_rem(p5_reverse, 2 ** 88)
     %{ print('p5_1',ids.p5_1) %}
     %{ print('p5_2',ids.p5_2) %}
     assert [h_string + 8] = p5_2
 
-    # n_bytes = 8 * 4 + 4
-    let (h_string_final : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=h_string, n_bytes=68)
+    let (h_string_final : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=h_string, n_bytes=69)
 
+    let (big_end_h_string : Uint256) = uint256_reverse_endian(h_string_final)
     finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
 
-    return (h_string_final)
+    return (big_end_h_string)
 end
 
 const gx1 = 17117865558768631194064792
@@ -180,12 +193,8 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(h
     let two = 2
     let x_p = Uint384(d0=hash.high, d1=hash.low, d2=0)
     %{
-        def pack_uint256(z, num_bits_shift: int = 128) -> int:
-            limbs = (z.low, z.high)
-            return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
-
-        num = pack_uint256(ids.hash)
-        print('x_p', hex(num))
+        print('x_p', hex(ids.hash.low)[2:] + hex(ids.hash.high)[2:]) 
+        print('x_p', hex(ids.hash.high)[2:] + hex(ids.hash.low)[2:])
     %}
     let (secp_modulus) = get_secp_modulus()
     %{ print("first pow") %}
