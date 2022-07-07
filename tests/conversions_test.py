@@ -42,12 +42,11 @@ def pack(z, num_bits_shift: int = 128) -> int:
     limbs = list(z)
     return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
 
-@pytest.mark.skip(reason="none")
 @pytest.mark.asyncio
 async def test_bigint3_to_uint384(verifier_factory):
     contract = verifier_factory
 
-    num = (2 ** 258) - 1
+    num = 367525736634966448906498224377090192761153467332175430118367082145611583776325
 
     input = split(num, 86, 3)
     print(input)
@@ -55,10 +54,12 @@ async def test_bigint3_to_uint384(verifier_factory):
 
     res = pack(execution_info.result[0])
     print("test")
-    print(num)
+    print(pack(input, 86))
     print(res)
-    assert num == res
+    print(num)
+    assert pack(input, 86) == res == num
     
+@pytest.mark.skip(reason="none")
 @pytest.mark.asyncio
 async def test_uint384_to_bigint3(verifier_factory):
     contract = verifier_factory
