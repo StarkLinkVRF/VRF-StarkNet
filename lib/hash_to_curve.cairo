@@ -18,8 +18,8 @@ from starkware.cairo.common.math import unsigned_div_rem
 func get_secp_modulus() -> (secp_modulus : Uint384):
     return (
         secp_modulus=Uint384(
-        d0=248144347276217270074328348468568277313,
-        d1=340282366920938463463374607431768211454,
+        d0=340282366920938463463374607427473243183,
+        d1=340282366920938463463374607431768211455,
         d2=0
         ))
 end
@@ -190,12 +190,10 @@ end
 func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(hash : Uint256) -> (
         success : felt, res : EcPoint):
     alloc_locals
-    let two = 2
-    let x_p = Uint384(d0=hash.high, d1=hash.low, d2=0)
-    %{
-        print('x_p', hex(ids.hash.low)[2:] + hex(ids.hash.high)[2:]) 
-        print('x_p', hex(ids.hash.high)[2:] + hex(ids.hash.low)[2:])
-    %}
+    %{ print("start arb s to p") %}
+    # Appends two at 256 bit
+    let x_p = Uint384(d0=hash.low, d1=hash.high, d2=0)
+
     let (secp_modulus) = get_secp_modulus()
     %{ print("first pow") %}
     let (x_cubed) = field_arithmetic_lib.pow(x_p, Uint384(d0=3, d1=0, d2=0), secp_modulus)
@@ -205,7 +203,7 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(h
     %{ print("getting sq root") %}
     let (success, beta) = field_arithmetic_lib.get_square_root(alpha, secp_modulus, generator)
     %{ print("success", ids.success) %}
-    %{ print("beta", ids.beta) %}
+    %{ print("beta", pack(ids.beta, 128)) %}
 
     if success == 1:
         # let (beta_is_zero) = uint384_lib.eq(beta, Uint384(d0=0,d1=0,d2=0))
@@ -213,11 +211,13 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(h
         # if beta_is_zero == 1:
         #    return (success=1, res=EcPoint(x=x, y=beta))
         # end
-
-        let (y) = uint384_lib.sub(x_p, beta)
-
+        # let (secp_modulus) = get_secp_modulus()
+        # let (y) = uint384_lib.sub(secp_modulus, beta)
+        let y = beta
         let (x_bigint3) = uint384_to_bigint3(x_p)
         let (y_bigint3) = uint384_to_bigint3(y)
+        %{ print('x_bigint3',pack(ids.x_bigint3, 86)) %}
+        %{ print('y bigint3',pack(ids.y_bigint3, 86)) %}
         return (success=1, res=EcPoint(x=x_bigint3, y=y_bigint3))
     end
 
@@ -277,7 +277,6 @@ func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
 
     %{ print("hashing inputs") %}
     let (h_message) = hash_inputs(suite_string, public_key, alpha, ctrl)
-    %{ print("hashed inputs", ids.h_message.low, ids.h_message.high) %}
     let (success, res) = arbitrary_string_to_point(h_message)
 
     if success == 1:
@@ -315,12 +314,4 @@ func BigInt3_to_64bit{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(input : Bi
         four=third_highest,
         five=second_lowest,
         six=lowest)
-end
-
-func hash_points{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
-        H : EcPoint, Gamma : EcPoint, U : EcPoint, V : EcPoint) -> (res : Uint256):
-    alloc_locals
-
-    let two = 2
-    return (res=Uint256(low=0, high=0))
 end
