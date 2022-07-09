@@ -11,7 +11,6 @@ from starkware.cairo.common.cairo_keccak.keccak import (
     keccak_bigend, keccak, finalize_keccak, keccak_add_uint256)
 from lib.field_arithmetic import field_arithmetic_lib
 from starkware.cairo.common.alloc import alloc
-from lib.uint384_extension import uint384_extension_lib
 from starkware.cairo.common.bitwise import bitwise_and
 from starkware.cairo.common.math import unsigned_div_rem
 from lib.hash_to_curve import bigint3_to_uint384, BigInt3_to_64bit, split_64_bits
