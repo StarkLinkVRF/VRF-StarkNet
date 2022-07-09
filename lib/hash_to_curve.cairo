@@ -59,29 +59,13 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256, ctr : felt) -> (res : Uint256):
     alloc_locals
 
-    %{
-        def pack(z, num_bits_shift: int = 128) -> int:
-            limbs = (z.d0, z.d1, z.d2)
-            return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
-    %}
-
     let (y_as_uint384) = bigint3_to_uint384(public_key.y)
-    %{ print(pack(ids.y_as_uint384)) %}
     let (_, y_mod_2) = uint384_lib.unsigned_div_rem(y_as_uint384, Uint384(d0=2, d1=0, d2=0))
 
     let y_octet = y_mod_2.d0 + 2
-    %{ print("y_octet", ids.y_octet) %}
 
     let (pk_string_one : felt, pk_string_two : felt, pk_string_three : felt, pk_string_four : felt,
         pk_string_five : felt, pk_string_six : felt) = BigInt3_to_64bit(public_key.x)
-
-    %{ print("pk strings") %}
-    %{ print(ids.pk_string_one) %}
-    %{ print(ids.pk_string_two) %}
-    %{ print(ids.pk_string_three) %}
-    %{ print(ids.pk_string_four) %}
-    %{ print(ids.pk_string_five) %}
-    %{ print(ids.pk_string_six) %}
 
     let one_string = 1
 
@@ -94,6 +78,8 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
 
     let (str_two_five_bytes, str_two_three_bytes) = split_64_bits(pk_string_four)
     let (str_three_five_bytes, str_three_three_bytes) = split_64_bits(pk_string_three)
+
+    # TODO remove pk_string_one, it will always be zero!
     # pk_string_one is one byte long
     # each 64 bit segment is split into (3 and 5 bytes) and then are recombined
     # suite_string || one_string || y_octet || pk_string_first_byte || five_bytes_pk_string_two| three_bytes_pk_string_two || five_bytes_pk_string_three...
@@ -120,51 +106,28 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
 
     let p5 = ctr + alpha_low_three_bytes * 2 ** 8
 
-    %{ print('p1',ids.p1) %}
-    %{ print('p2',ids.p2) %}
-    %{ print('p3',ids.p3) %}
-    %{ print('p4',ids.p4) %}
-    %{ print('p5',ids.p5) %}
-
-    %{
-        p = hex(ids.p1)[2:] +  hex( ids.p2)[2:] + hex(ids.p3)[2:] + hex(ids.p4)[2:] + hex(ids.p5)[2:]
-
-        print("hex res")
-        print(p)
-    %}
-
     let (p1_reverse) = word_reverse_endian(p1)
     let (p1_2, p1_1) = unsigned_div_rem(p1_reverse, 2 ** 64)
-    %{ print('p1_1',ids.p1_1) %}
-    %{ print('p1_2',ids.p1_2) %}
     assert [h_string] = p1_1
     assert [h_string + 1] = p1_2
 
     let (p2_reverse) = word_reverse_endian(p2)
     let (p2_2, p2_1) = unsigned_div_rem(p2_reverse, 2 ** 64)
-    %{ print('p2_1',ids.p2_1) %}
-    %{ print('p2_2',ids.p2_2) %}
     assert [h_string + 2] = p2_1
     assert [h_string + 3] = p2_2
 
     let (p3_reverse) = word_reverse_endian(p3)
     let (p3_2, p3_1) = unsigned_div_rem(p3_reverse, 2 ** 64)
-    %{ print('p3_1',ids.p3_1) %}
-    %{ print('p3_2',ids.p3_2) %}
     assert [h_string + 4] = p3_1
     assert [h_string + 5] = p3_2
 
     let (p4_reverse) = word_reverse_endian(p4)
     let (p4_2, p4_1) = unsigned_div_rem(p4_reverse, 2 ** 64)
-    %{ print('p4_1',ids.p4_1) %}
-    %{ print('p4_2',ids.p4_2) %}
     assert [h_string + 6] = p4_1
     assert [h_string + 7] = p4_2
 
     let (p5_reverse) = word_reverse_endian(p5)
     let (p5_2, p5_1) = unsigned_div_rem(p5_reverse, 2 ** 88)
-    %{ print('p5_1',ids.p5_1) %}
-    %{ print('p5_2',ids.p5_2) %}
     assert [h_string + 8] = p5_2
 
     let (h_string_final : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=h_string, n_bytes=69)
@@ -190,20 +153,15 @@ end
 func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(hash : Uint256) -> (
         success : felt, res : EcPoint):
     alloc_locals
-    %{ print("start arb s to p") %}
     # Appends two at 256 bit
     let x_p = Uint384(d0=hash.low, d1=hash.high, d2=0)
 
     let (secp_modulus) = get_secp_modulus()
-    %{ print("first pow") %}
     let (x_cubed) = field_arithmetic_lib.pow(x_p, Uint384(d0=3, d1=0, d2=0), secp_modulus)
     let (alpha) = field_arithmetic_lib.add(x_cubed, Uint384(d0=7, d1=0, d2=0), secp_modulus)
 
     let generator = Uint384(5, 0, 0)
-    %{ print("getting sq root") %}
     let (success, beta) = field_arithmetic_lib.get_square_root(alpha, secp_modulus, generator)
-    %{ print("success", ids.success) %}
-    %{ print("beta", pack(ids.beta, 128)) %}
 
     if success == 1:
         # let (beta_is_zero) = uint384_lib.eq(beta, Uint384(d0=0,d1=0,d2=0))
@@ -216,8 +174,6 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(h
         let y = beta
         let (x_bigint3) = uint384_to_bigint3(x_p)
         let (y_bigint3) = uint384_to_bigint3(y)
-        %{ print('x_bigint3',pack(ids.x_bigint3, 86)) %}
-        %{ print('y bigint3',pack(ids.y_bigint3, 86)) %}
         return (success=1, res=EcPoint(x=x_bigint3, y=y_bigint3))
     end
 
@@ -262,7 +218,6 @@ func uint384_to_bigint3{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : Uin
     let (bottom_d2, _) = unsigned_div_rem(in.d1, d1_shift)
 
     let d2 = bottom_d2 + in.d2 * (2 ** 84)
-    %{ print('d0 ', ids.d0) %}
     return (BigInt3(d0=d0, d1=d1, d2=d2))
 end
 
@@ -275,14 +230,12 @@ func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         point_on_curve : EcPoint):
     alloc_locals
 
-    %{ print("hashing inputs") %}
     let (h_message) = hash_inputs(suite_string, public_key, alpha, ctrl)
     let (success, res) = arbitrary_string_to_point(h_message)
 
     if success == 1:
         return (res)
     end
-    %{ print("trying and incrementing") %}
     let (res) = try_and_increment(suite_string, public_key, alpha, ctrl + 1)
 
     return (res)

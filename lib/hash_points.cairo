@@ -215,24 +215,6 @@ func hash_points{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     let (p1_reverse) = word_reverse_endian(p1)
     let (p1_2, p1_1) = unsigned_div_rem(p1_reverse, 2 ** 64)
 
-    %{
-        def pack256(z, num_bits_shift: int = 128 ) -> int:
-            limbs = (z.low, z.high)
-            return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
-        print('p1 ... p8')
-        print(hex(ids.p1))
-        print(hex(ids.p2))
-        print(hex(ids.p3))
-        print(hex(ids.p4))
-        print(hex(ids.p5))
-        print(hex(ids.p6))
-        print(hex(ids.p7))
-        print(hex(ids.p8))
-        print(hex(ids.b4))
-
-        string = hex(ids.p1)[2:] + hex(ids.p2)[2:] + hex(ids.p3)[2:] + hex(ids.p4)[2:] + hex(ids.p5)[2:] + hex(ids.p6)[2:] + hex(ids.p7)[2:] + hex(ids.p8)[2:] + hex(ids.b4)[2:] 
-        print("hex string input", string)
-    %}
     assert [h_string] = p1_1
     assert [h_string + 1] = p1_2
 
