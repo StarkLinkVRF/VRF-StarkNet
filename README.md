@@ -1,15 +1,11 @@
 # VRF-StarkNet
 Contracts for verifiable randomness on StarkNet
 
+A VRF oracle on StarkNet based on the [Internet Research Task Force vrf-spec-05](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-05#section-5.3). The specific cryptographic suite is a modified `SECP256K1_SHA256_TAI` with a hash function of keccak rather than sha256. A compatible client for generating proofs for this suite is available [here](https://github.com/0xNonCents/vrf-client-starknet-rs).
+ 
 
-[Motivation](https://hackmd.io/@plyL18hXRUWjalLcgt3rLg/Sy4MY981q)
+----
 
-
-Deployed on StarkNet Testnet
-```
-Dice Game : 0x01837c5fa18244deb1723bf2512c2b1657d4c7f085d894277d53471be4e5bd6f
-Oracle : 0x0478aee025806b6058a60832758cf8dfca36265d28478ce17e6c8148d98ca926
-```
 [Example Dice roll transaction](https://goerli.voyager.online/tx/0x176ccd696901a2b016579764eda165e42073eb36a2daf9787c848e5ba455fe2#events)
 
 Call `request_rng` on the Dice Game contract
