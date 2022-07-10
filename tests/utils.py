@@ -2,6 +2,7 @@
 from starkware.cairo.common.hash_state import compute_hash_on_elements
 from starkware.crypto.signature.signature import private_to_stark_key, sign
 from starkware.starknet.public.abi import get_selector_from_name
+from typing import List, Callable
 
 class Signer():
     """
@@ -49,3 +50,23 @@ def hash_message(sender, to, selector, calldata, nonce):
         nonce
     ]
     return compute_hash_on_elements(message)
+
+
+def bitwise_or_bytes(var, key):
+    return bytes(a ^ b for a, b in zip(var, key))
+
+def split(num: int, num_bits_shift: int = 128, length: int = 3) -> List[int]:
+    a = []
+    for _ in range(length):
+        a.append(num & ((1 << num_bits_shift) - 1))
+        num = num >> num_bits_shift
+    return tuple(a)
+
+def pack(z, num_bits_shift: int = 128) -> int:
+    limbs = list(z)
+    return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
+
+
+bytes_to_int_little: Callable[[bytes], int] = lambda word: int.from_bytes(word, "little")
+
+bytes_32_to_uint_256_little : Callable[[bytes], tuple] = lambda word : split(bytes_to_int_little(word), 128, 2)

@@ -1,2 +1,3 @@
 ./artifacts/*
 accounts.json
+*.pyc
