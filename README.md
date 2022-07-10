@@ -3,6 +3,7 @@ Contracts for verifiable randomness on StarkNet
 
 A VRF oracle on StarkNet based on the [Internet Research Task Force vrf-spec-05](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-05#section-5.3). The specific cryptographic suite is a modified `SECP256K1_SHA256_TAI` with a hash function of keccak rather than sha256. A compatible client for generating proofs for this suite is available [here](https://github.com/0xNonCents/vrf-client-starknet-rs).
  
+**Requires hints coming in the next version of cairo to be deployed**
 
 ----
 
