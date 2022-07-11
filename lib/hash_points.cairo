@@ -1,19 +1,14 @@
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
-from starkware.cairo.common.uint256 import (
-    Uint256, split_64, uint256_xor, word_reverse_endian, uint256_reverse_endian)
+from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
+from starkware.cairo.common.uint256 import Uint256, word_reverse_endian, uint256_reverse_endian
 
 from lib.uint384 import Uint384, uint384_lib
-from lib.uint384_extension import Uint768
 
 from starkware.cairo.common.cairo_secp.ec import EcPoint
-from starkware.cairo.common.cairo_secp.bigint import BigInt3
-from starkware.cairo.common.cairo_keccak.keccak import (
-    keccak_bigend, keccak, finalize_keccak, keccak_add_uint256)
-from lib.field_arithmetic import field_arithmetic_lib
+from starkware.cairo.common.cairo_keccak.keccak import keccak, finalize_keccak
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.bitwise import bitwise_and
 from starkware.cairo.common.math import unsigned_div_rem
-from lib.hash_to_curve import bigint3_to_uint384, BigInt3_to_64bit, split_64_bits
+from lib.hash_to_curve import bigint3_to_uint384, BigInt3_to_64bit
 
 const eight_bits_shift = 2 ** 8
 const first_shift = 2 ** 24
@@ -255,7 +250,6 @@ func hash_points{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     let (p1_reverse) = word_reverse_endian(b4)
     let (p1_2, p1_1) = unsigned_div_rem(p1_reverse, 2 ** 80)
 
-    %{ print( ids.p1_2) %}
     assert [h_string + 16] = p1_2
 
     let (h_string_final : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=h_string, n_bytes=134)
