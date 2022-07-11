@@ -1,4 +1,4 @@
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
+from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
 from starkware.cairo.common.cairo_secp.ec import EcPoint, ec_mul, ec_add, ec_negate
 from lib.hash_to_curve import hash_to_curve, get_generator
 from starkware.cairo.common.cairo_secp.bigint import BigInt3

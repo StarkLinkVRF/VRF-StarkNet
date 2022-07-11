@@ -5,18 +5,11 @@
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import get_caller_address, get_block_timestamp
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-
-struct DrandPayload:
-    member randomness : Uint256
-    # TODO : add signature, and possibly previous_signature
-end
+from starkware.cairo.common.cairo_secp.bigint import BigInt3
 
 @contract_interface
 namespace IRNGOracle:
-    func recieve_rng(amount : DrandPayload):
-    end
-
-    func request_rng():
+    func request_rng(request_id : felt):
     end
 end
 
@@ -42,7 +35,7 @@ end
 
 @external
 func will_recieve_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        rng : felt, request_id : felt):
+        rng : BigInt3, request_id : felt):
     let (oracle) = oracle_address.read()
     let (caller_address) = get_caller_address()
 

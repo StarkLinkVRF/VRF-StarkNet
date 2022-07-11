@@ -1,3 +1,6 @@
+# @Title Uint384-cairo - https://github.com/NethermindEth/uint384-cairo
+# @Author Albert Garreta, 0xNonCents
+
 from starkware.cairo.common.bitwise import bitwise_and, bitwise_or, bitwise_xor
 from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
 from starkware.cairo.common.math import assert_in_range, assert_le, assert_nn_le, assert_not_zero

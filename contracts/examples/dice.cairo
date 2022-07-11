@@ -4,19 +4,12 @@
 
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import get_caller_address
-from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import unsigned_div_rem, split_felt
-
-struct DrandPayload:
-    member randomness : Uint256
-    # TODO : add signature, and possibly previous_signature
-end
+from starkware.cairo.common.cairo_secp.bigint import BigInt3
 
 @contract_interface
 namespace IRNGOracle:
-    func recieve_rng(amount : DrandPayload):
-    end
-
     func request_rng() -> (requestId : felt):
     end
 end
@@ -34,15 +27,20 @@ func rng_request_resolved(rng : felt, request_id : felt, result : felt):
 end
 
 @constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        oracle_addr : felt):
+func constructor{syscall_ptr : felt*, range_check_ptr}(oracle_addr : felt):
     oracle_address.write(oracle_addr)
 
     return ()
 end
 
-func roll_dice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(rng : felt) -> (
-        roll : felt):
+@external
+func request_rng{syscall_ptr : felt*, range_check_ptr}() -> (request_id : felt):
+    let (oracle) = oracle_address.read()
+    let (request_id) = IRNGOracle.request_rng(contract_address=oracle)
+    return (request_id)
+end
+
+func roll_dice{syscall_ptr : felt*, range_check_ptr}(rng : felt) -> (roll : felt):
     # Take the lower 128 bits of the random string
     let (_, low) = split_felt(rng)
     let (_, roll) = unsigned_div_rem(low, 6)
@@ -50,22 +48,13 @@ func roll_dice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 end
 
 @external
-func request_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-        request_id : felt):
-    let (oracle) = oracle_address.read()
-    let (request_id) = IRNGOracle.request_rng(contract_address=oracle)
-    return (request_id)
-end
-
-@external
-func will_recieve_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        rng : felt, request_id : felt):
+func will_recieve_rng{syscall_ptr : felt*, range_check_ptr}(rng : BigInt3, request_id : felt):
     let (oracle) = oracle_address.read()
     let (caller_address) = get_caller_address()
 
     assert oracle = caller_address
 
-    let (roll) = roll_dice(rng)
+    let (roll) = roll_dice(rng.d0)
 
     roll_results.write(request_id, roll)
 
@@ -74,8 +63,7 @@ func will_recieve_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
 end
 
 @view
-func get_roll_result{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        id : felt) -> (roll : felt):
+func get_roll_result{syscall_ptr : felt*, range_check_ptr}(id : felt) -> (roll : felt):
     let (roll) = roll_results.read(id)
     return (roll)
 end

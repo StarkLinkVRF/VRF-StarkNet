@@ -1,5 +1,6 @@
 
 
+from copyreg import constructor
 from typing import List
 import asyncio
 import os
@@ -9,7 +10,11 @@ from starkware.starknet.compiler.compile import compile_starknet_files
 from starkware.starknet.definitions.general_config import build_general_config, default_general_config
 
 
-HASH_TO_CURVE_CONTRACT = os.path.join("contracts", "hash_to_curve.cairo")
+HASH_TO_CURVE_CONTRACT = os.path.join("contracts", "test_utils", "hash_to_curve.cairo")
+VERIFIER_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/test_utils/verify.cairo")
+RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
+DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
+
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -39,3 +44,33 @@ async def hash_to_curve_factory(starknet_factory):
 
     return hash_to_curve_contract
 
+@pytest.fixture(scope="module")
+async def verifier_factory(starknet_factory):
+    starknet = starknet_factory
+
+    
+    # Deploy the account contract
+    contract_def = compile_starknet_files(
+        files=[VERIFIER_CONTRACT], disable_hint_validation=True
+    )
+    verifier_contract = await starknet.deploy(contract_def=contract_def)
+
+    return verifier_contract
+
+
+RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
+DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
+
+async def deploy_contracts(starknet, public_key):
+
+    contract_def = compile_starknet_files(
+        files=[RNG_ORACLE_CONTRACT], disable_hint_validation=True
+    )
+    rng_oracle_contract = await starknet.deploy(contract_def=contract_def,  constructor_calldata=[public_key])
+    print("rng_oracle_contract.contract_address ", rng_oracle_contract.contract_address)
+    contract_def = compile_starknet_files(
+        files=[DICE_CONTRACT], disable_hint_validation=True
+    )
+    rng_consumer_contract = await starknet.deploy(contract_def=contract_def, constructor_calldata=[rng_oracle_contract.contract_address])
+
+    return rng_oracle_contract, rng_consumer_contract

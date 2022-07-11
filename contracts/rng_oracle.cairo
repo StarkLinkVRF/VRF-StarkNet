@@ -1,29 +1,30 @@
 %lang starknet
 
-%builtins pedersen range_check
+%builtins pedersen range_check bitwise
 
-from starkware.cairo.common.uint256 import Uint256
-from starkware.starknet.common.syscalls import get_caller_address, get_block_timestamp
-from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.hash import hash2
+from starkware.cairo.common.uint256 import Uint256, uint256_reverse_endian
+from starkware.starknet.common.syscalls import get_caller_address
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_secp.ec import EcPoint
+from starkware.cairo.common.cairo_keccak.keccak import keccak_add_felt, keccak, finalize_keccak
+from starkware.cairo.common.cairo_secp.bigint import BigInt3
+from starkware.cairo.common.math import assert_not_equal
+from lib.verify import verify
+from starkware.cairo.common.alloc import alloc
 
 @contract_interface
 namespace IRNGConsumer:
     func request_rng():
     end
 
-    func will_recieve_rng(rng : felt, request_id : felt):
+    func will_recieve_rng(rng : BigInt3, request_id : felt):
     end
-end
-
-struct RNGPayload:
-    member randomness : Uint256
-    # TODO : add signature, and possibly previous_signature
 end
 
 struct Request:
     member callback_address : felt
-    member request_id : felt
+    member callback_request_id : felt
+    member alpha : Uint256
 end
 
 @storage_var
@@ -35,70 +36,71 @@ func request_index() -> (index : felt):
 end
 
 @storage_var
-func completed_index() -> (index : felt):
+func completed_requests(index : felt) -> (is_complete : felt):
+end
+
+@storage_var
+func public_key() -> (index : EcPoint):
 end
 
 @event
-func rng_recieved(randomness : Uint256):
+func request_recieved(request_index : felt):
 end
 
 @constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _public_key : EcPoint):
     request_index.write(1)
-    completed_index.write(1)
-
+    public_key.write(_public_key)
     return ()
 end
 
-func resolve_requests{syscall_ptr : felt*, range_check_ptr, pedersen_ptr : HashBuiltin*}(
-        curr_index : felt, end_index : felt, randomness : Uint256):
-    if curr_index == end_index:
-        completed_index.write(curr_index)
-        return ()
-    end
-    let (request) = requests.read(curr_index)
+@external
+func resolve_rng_request{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,
+        bitwise_ptr : BitwiseBuiltin*}(
+        request_index : felt, gamma_point : EcPoint, c : BigInt3, s : BigInt3):
+    alloc_locals
 
-    # TODO : make hash unique for each iteration
-    let (hash) = hash2{hash_ptr=pedersen_ptr}(randomness.low, randomness.high)
+    let (is_complete : felt) = completed_requests.read(request_index)
+    assert_not_equal(is_complete, 1)
+
+    let (_public_key : EcPoint) = public_key.read()
+    let (request : Request) = requests.read(request_index)
+
+    verify(_public_key, request.alpha, gamma_point, c, s)
+
     IRNGConsumer.will_recieve_rng(
-        contract_address=request.callback_address, rng=hash, request_id=request.request_id)
+        contract_address=request.callback_address, rng=c, request_id=request.callback_request_id)
 
-    resolve_requests(curr_index + 1, end_index, randomness)
+    completed_requests.write(request_index, 1)
+
     return ()
 end
 
 @external
-func resolve_rng_requests{syscall_ptr : felt*, range_check_ptr, pedersen_ptr : HashBuiltin*}(
-        rng_high : felt, rng_low : felt):
-    let rng = Uint256(low=rng_low, high=rng_high)
-
-    # TODO : verify calling address
-    # TODO : verify randomness
-    rng_recieved.emit(randomness=rng)
-
-    let (start_index) = completed_index.read()
-    let (end_index) = request_index.read()
-
-    if start_index == end_index:
-        return ()
-    end
-
-    resolve_requests(start_index, end_index, rng)
-    return ()
-end
-
-@external
-func request_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-        request_id : felt):
+func request_rng{
+        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,
+        bitwise_ptr : BitwiseBuiltin*}() -> (request_id : felt):
+    alloc_locals
     let (caller_address) = get_caller_address()
     let (curr_index) = request_index.read()
 
-    # TODO : verify caller against whitelist
+    let (local keccak_ptr_start) = alloc()
+    let keccak_ptr = keccak_ptr_start
+    let inputs : felt* = alloc()
+    keccak_add_felt{inputs=inputs}(curr_index, 1)
+    let (h_string : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=inputs, n_bytes=32)
 
-    let (request_id) = hash2{hash_ptr=pedersen_ptr}(caller_address, curr_index)
+    let (alpha : Uint256) = uint256_reverse_endian(h_string)
+    finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
 
-    requests.write(curr_index, Request(callback_address=caller_address, request_id=request_id))
+    requests.write(
+        curr_index,
+        Request(callback_address=caller_address, callback_request_id=curr_index, alpha=alpha))
     request_index.write(curr_index + 1)
 
-    return (request_id)
+    request_recieved.emit(request_index=curr_index)
+
+    return (curr_index)
 end
