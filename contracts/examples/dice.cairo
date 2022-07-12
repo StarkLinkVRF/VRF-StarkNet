@@ -23,18 +23,20 @@ func roll_results(id : felt) -> (result : felt):
 end
 
 @event
-func rng_request_resolved(rng : felt, request_id : felt, result : felt):
+func rng_request_resolved(rng : BigInt3, request_id : felt, result : felt):
 end
 
 @constructor
-func constructor{syscall_ptr : felt*, range_check_ptr}(oracle_addr : felt):
+func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        oracle_addr : felt):
     oracle_address.write(oracle_addr)
 
     return ()
 end
 
 @external
-func request_rng{syscall_ptr : felt*, range_check_ptr}() -> (request_id : felt):
+func request_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+        request_id : felt):
     let (oracle) = oracle_address.read()
     let (request_id) = IRNGOracle.request_rng(contract_address=oracle)
     return (request_id)
@@ -48,7 +50,8 @@ func roll_dice{syscall_ptr : felt*, range_check_ptr}(rng : felt) -> (roll : felt
 end
 
 @external
-func will_recieve_rng{syscall_ptr : felt*, range_check_ptr}(rng : BigInt3, request_id : felt):
+func will_recieve_rng{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        rng : BigInt3, request_id : felt):
     let (oracle) = oracle_address.read()
     let (caller_address) = get_caller_address()
 
@@ -63,7 +66,8 @@ func will_recieve_rng{syscall_ptr : felt*, range_check_ptr}(rng : BigInt3, reque
 end
 
 @view
-func get_roll_result{syscall_ptr : felt*, range_check_ptr}(id : felt) -> (roll : felt):
+func get_roll_result{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        id : felt) -> (roll : felt):
     let (roll) = roll_results.read(id)
     return (roll)
 end

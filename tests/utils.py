@@ -55,12 +55,12 @@ def hash_message(sender, to, selector, calldata, nonce):
 def bitwise_or_bytes(var, key):
     return bytes(a ^ b for a, b in zip(var, key))
 
-def split(num: int, num_bits_shift: int = 128, length: int = 3) -> List[int]:
+def split(num: int, num_bits_shift: int = 128, length: int = 3, as_list = False) -> List[int]:
     a = []
     for _ in range(length):
         a.append(num & ((1 << num_bits_shift) - 1))
         num = num >> num_bits_shift
-    return tuple(a)
+    return a if as_list else  tuple(a)
 
 def pack(z, num_bits_shift: int = 128) -> int:
     limbs = list(z)

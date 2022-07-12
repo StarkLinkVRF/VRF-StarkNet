@@ -61,13 +61,15 @@ async def verifier_factory(starknet_factory):
 RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
 DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
 
-async def deploy_contracts(starknet, public_key):
+async def deploy_contracts(starknet, public_key : list):
 
     contract_def = compile_starknet_files(
         files=[RNG_ORACLE_CONTRACT], disable_hint_validation=True
     )
-    rng_oracle_contract = await starknet.deploy(contract_def=contract_def,  constructor_calldata=[public_key])
-    print("rng_oracle_contract.contract_address ", rng_oracle_contract.contract_address)
+
+    print("public key ", public_key)
+    rng_oracle_contract = await starknet.deploy(contract_def=contract_def,  constructor_calldata=public_key)
+    print("rng_oracle_contract.contract_address ", hex(rng_oracle_contract.contract_address))
     contract_def = compile_starknet_files(
         files=[DICE_CONTRACT], disable_hint_validation=True
     )

@@ -6,7 +6,7 @@ from starkware.cairo.common.uint256 import Uint256, uint256_reverse_endian
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.cairo_secp.ec import EcPoint
-from starkware.cairo.common.cairo_keccak.keccak import keccak_add_felt, keccak, finalize_keccak
+from starkware.cairo.common.cairo_keccak.keccak import keccak_felts_bigend, keccak, finalize_keccak
 from starkware.cairo.common.cairo_secp.bigint import BigInt3
 from starkware.cairo.common.math import assert_not_equal
 from lib.verify import verify
@@ -50,8 +50,8 @@ end
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _public_key : EcPoint):
-    request_index.write(1)
     public_key.write(_public_key)
+    request_index.write(1)
     return ()
 end
 
@@ -89,12 +89,18 @@ func request_rng{
     let (local keccak_ptr_start) = alloc()
     let keccak_ptr = keccak_ptr_start
     let inputs : felt* = alloc()
-    keccak_add_felt{inputs=inputs}(curr_index, 1)
-    let (h_string : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=inputs, n_bytes=32)
+    %{ print("hello") %}
 
+    [inputs] = curr_index
+
+    %{ print("2") %}
+    let (h_string : Uint256) = keccak_felts_bigend{keccak_ptr=keccak_ptr}(
+        n_elements=1, elements=inputs)
+    %{ print("3") %}
     let (alpha : Uint256) = uint256_reverse_endian(h_string)
     finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
 
+    %{ print('our alpha ',hex(ids.alpha.low + ids.alpha.high * 2 ** 128  )) %}
     requests.write(
         curr_index,
         Request(callback_address=caller_address, callback_request_id=curr_index, alpha=alpha))
