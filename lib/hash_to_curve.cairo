@@ -171,10 +171,19 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(h
         # end
         # let (secp_modulus) = get_secp_modulus()
         # let (y) = uint384_lib.sub(secp_modulus, beta)
-        let y = beta
-        let (x_bigint3) = uint384_to_bigint3(x_p)
-        let (y_bigint3) = uint384_to_bigint3(y)
-        return (success=1, res=EcPoint(x=x_bigint3, y=y_bigint3))
+        let (_, beta_is_odd) = uint384_lib.unsigned_div_rem(beta, Uint384(d0=2, d1=0, d2=0))
+
+        if beta_is_odd.d0 == 1:
+            let (secp_modulus) = get_secp_modulus()
+            let (y) = uint384_lib.sub(secp_modulus, beta)
+            let (x_bigint3) = uint384_to_bigint3(x_p)
+            let (y_bigint3) = uint384_to_bigint3(y)
+            return (success=1, res=EcPoint(x=x_bigint3, y=y_bigint3))
+        else:
+            let (x_bigint3) = uint384_to_bigint3(x_p)
+            let (y_bigint3) = uint384_to_bigint3(beta)
+            return (success=1, res=EcPoint(x=x_bigint3, y=y_bigint3))
+        end
     end
 
     return (success=0, res=EcPoint(x=BigInt3(d0=0, d1=0, d2=0), y=BigInt3(d0=0, d1=0, d2=0)))

@@ -2,3 +2,4 @@
 ./artifacts/abis/*
 accounts.json
 *.pyc
+*.deployments.txt
