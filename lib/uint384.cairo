@@ -138,7 +138,7 @@ namespace uint384_lib:
                 a = []
                 for _ in range(length):
                     a.append( num & ((1 << num_bits_shift) - 1) )
-                    num = num >> num_bits_shift 
+                    num = num >> num_bits_shift
                 return tuple(a)
 
             def pack(z, num_bits_shift: int) -> int:
@@ -257,7 +257,7 @@ namespace uint384_lib:
                 a = []
                 for _ in range(length):
                     a.append( num & ((1 << num_bits_shift) - 1) )
-                    num = num >> num_bits_shift 
+                    num = num >> num_bits_shift
                 return tuple(a)
 
             def pack(z, num_bits_shift: int) -> int:
