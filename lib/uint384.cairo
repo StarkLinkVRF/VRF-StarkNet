@@ -263,7 +263,7 @@ namespace uint384_lib:
             def pack(z, num_bits_shift: int) -> int:
                 limbs = (z.d0, z.d1, z.d2)
                 return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
-                
+
             a = pack(ids.a, num_bits_shift = 128)
             div = pack(ids.div, num_bits_shift = 128)
             quotient, remainder = divmod(a, div)

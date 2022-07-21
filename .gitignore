@@ -1,5 +1,8 @@
-./artifacts/*
-./artifacts/abis/*
+/artifacts
 accounts.json
 *.pyc
 *.deployments.txt
+.env
+secrets.txt
+node.json
+extra/

@@ -65,31 +65,12 @@ namespace field_arithmetic_lib:
 
     # Computes a * b modulo p
     func mul{range_check_ptr}(a : Uint384, b : Uint384, p : Uint384) -> (res : Uint384):
-        alloc_locals
-        local remainder : Uint384
-        %{
-            from starkware.python.math_utils import isqrt
-
-            def split(num: int, num_bits_shift: int, length: int):
-                a = []
-                for _ in range(length):
-                    a.append( num & ((1 << num_bits_shift) - 1) )
-                    num = num >> num_bits_shift 
-                return tuple(a)
-
-            def pack(z, num_bits_shift: int) -> int:
-                limbs = (z.d0, z.d1, z.d2)
-                return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
-
-            a = pack(ids.a, num_bits_shift=128)
-            b = pack(ids.b, num_bits_shift=128)
-            p = pack(ids.p, num_bits_shift=128)
-            product = (a * b) % p
-            product_split = split(product, num_bits_shift=128, length=3)
-            ids.remainder.d0 = product_split[0]
-            ids.remainder.d1 = product_split[1]
-            ids.remainder.d2 = product_split[2]
-        %}
+        let (low : Uint384, high : Uint384) = uint384_lib.mul(a, b)
+        let full_mul_result : Uint768 = Uint768(low.d0, low.d1, low.d2, high.d0, high.d1, high.d2)
+        let (quotient : Uint768,
+            remainder : Uint384) = uint384_extension_lib.unsigned_div_rem_uint768_by_uint384(
+            full_mul_result, p
+        )
         return (remainder)
     end
 
@@ -205,45 +186,42 @@ namespace field_arithmetic_lib:
         local sqrt_gx : Uint384
 
         # Compute square roots in a hint
-        %{
+%{
             from starkware.python.math_utils import is_quad_residue, sqrt
 
             def split(num: int, num_bits_shift: int = 128, length: int = 3):
                 a = []
                 for _ in range(length):
                     a.append( num & ((1 << num_bits_shift) - 1) )
-                    num = num >> num_bits_shift 
+                    num = num >> num_bits_shift
                 return tuple(a)
 
             def pack(z, num_bits_shift: int = 128) -> int:
                 limbs = (z.d0, z.d1, z.d2)
                 return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
 
-            print("0") 
+
             generator = pack(ids.generator)
             x = pack(ids.x)
             p = pack(ids.p)
-            print(x)
+
             success_x = is_quad_residue(x, p)
             root_x = sqrt(x, p) if success_x else None
+
             success_gx = is_quad_residue(generator*x, p)
             root_gx = sqrt(generator*x, p) if success_gx else None
-            print("three")
 
             # Check that one is 0 and the other is 1
-            print("success_x", success_x)
-            print("success_gx", success_gx)  
             if x != 0:
                 assert success_x + success_gx ==1
-            print("root_x", root_x)
-            print("root_gx", root_gx)  
+
             # `None` means that no root was found, but we need to transform these into a felt no matter what
             if root_x == None:
                 root_x = 0
             if root_gx == None:
                 root_gx = 0
-            ids.success_x = success_x
-            ids.success_gx =success_gx
+            ids.success_x = int(success_x)
+            ids.success_gx = int(success_gx)
             split_root_x = split(root_x)
             split_root_gx = split(root_gx)
             ids.sqrt_x.d0 = split_root_x[0]
@@ -252,7 +230,6 @@ namespace field_arithmetic_lib:
             ids.sqrt_gx.d0 = split_root_gx[0]
             ids.sqrt_gx.d1 = split_root_gx[1]
             ids.sqrt_gx.d2 = split_root_gx[2]
-            print("done")
         %}
 
         # Verify that the values computed in the hint are what they are supposed to be
