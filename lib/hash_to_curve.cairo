@@ -15,7 +15,7 @@ from lib.uint384_extension import uint384_extension_lib
 from starkware.cairo.common.bitwise import bitwise_and
 from starkware.cairo.common.math import unsigned_div_rem
 
-func get_secp_modulus() -> (secp_modulus : Uint384):
+func get_secp_modulus() -> (secp_modulus : Uint384): 
     return (
         secp_modulus=Uint384(
         d0=340282366920938463463374607427473243183,
@@ -55,10 +55,9 @@ func split_128_bits{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : felt) -
     return (twelve_bytes, four_bytes)
 end
 
-func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, keccak_ptr : felt*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256, ctr : felt) -> (res : Uint256):
     alloc_locals
-
     let (y_as_uint384) = bigint3_to_uint384(public_key.y)
     let (_, y_mod_2) = uint384_lib.unsigned_div_rem(y_as_uint384, Uint384(d0=2, d1=0, d2=0))
 
@@ -68,9 +67,6 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         pk_string_five : felt, pk_string_six : felt) = BigInt3_to_64bit(public_key.x)
 
     let one_string = 1
-
-    let (local keccak_ptr_start) = alloc()
-    let keccak_ptr = keccak_ptr_start
 
     let h_string : felt* = alloc()
 
@@ -133,8 +129,6 @@ func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     let (h_string_final : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=h_string, n_bytes=69)
 
     let (big_end_h_string : Uint256) = uint256_reverse_endian(h_string_final)
-    finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
-
     return (big_end_h_string)
 end
 
@@ -234,18 +228,19 @@ func uint256ToUint384(in : Uint256) -> (out : Uint384):
     return (out=Uint384(d0=in.high, d1=in.low, d2=0))
 end
 
-func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, keccak_ptr : felt*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256, ctrl : felt) -> (
         point_on_curve : EcPoint):
     alloc_locals
 
-    let (h_message) = hash_inputs(suite_string, public_key, alpha, ctrl)
+    let (h_message) = hash_inputs{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, ctrl)
     let (success, res) = arbitrary_string_to_point(h_message)
 
     if success == 1:
         return (res)
     end
-    let (res) = try_and_increment(suite_string, public_key, alpha, ctrl + 1)
+
+    let (res) = try_and_increment{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, ctrl + 1)
 
     return (res)
 end
@@ -254,8 +249,11 @@ func hash_to_curve{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256) -> (point_on_curve : EcPoint):
     alloc_locals
 
-    let (res) = try_and_increment(suite_string, public_key, alpha, 0)
+    let (local keccak_ptr_start) = alloc()
+    let keccak_ptr = keccak_ptr_start
 
+    let (res) = try_and_increment{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, 0)
+    finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
     return (res)
 end
 

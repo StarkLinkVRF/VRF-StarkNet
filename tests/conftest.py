@@ -14,7 +14,7 @@ HASH_TO_CURVE_CONTRACT = os.path.join("contracts", "test_utils", "hash_to_curve.
 VERIFIER_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/test_utils/verify.cairo")
 RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
 DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
-
+HASH_CONTRACT = os.path.join("contracts", "test_utils", "rng_hash.cairo")
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -43,6 +43,19 @@ async def hash_to_curve_factory(starknet_factory):
     hash_to_curve_contract = await starknet.deploy(contract_class=contract_class)
 
     return hash_to_curve_contract
+
+@pytest.fixture(scope="module")
+async def hash_factory(starknet_factory):
+
+    starknet = starknet_factory
+
+    # Deploy the account contract
+    contract_class = compile_starknet_files(
+        files=[HASH_CONTRACT], disable_hint_validation=True
+    )
+    hash_contract = await starknet.deploy(contract_class=contract_class)
+
+    return hash_contract
 
 @pytest.fixture(scope="module")
 async def verifier_factory(starknet_factory):
