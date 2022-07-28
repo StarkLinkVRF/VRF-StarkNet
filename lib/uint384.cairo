@@ -1,6 +1,3 @@
-# @Title Uint384-cairo - https://github.com/NethermindEth/uint384-cairo
-# @Author Albert Garreta, 0xNonCents
-
 from starkware.cairo.common.bitwise import bitwise_and, bitwise_or, bitwise_xor
 from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
 from starkware.cairo.common.math import assert_in_range, assert_le, assert_nn_le, assert_not_zero
@@ -8,7 +5,6 @@ from starkware.cairo.common.math_cmp import is_le
 # from starkware.cairo.common.uint256 import word_reverse_endian
 from starkware.cairo.common.pow import pow
 from starkware.cairo.common.registers import get_ap, get_fp_and_pc
-from starkware.cairo.common.uint256 import split_64
 
 # This library is adapted from Cairo's common library Uint256 and it follows it as closely as possible.
 # The library implements basic operations between 384-bit integers.
@@ -70,11 +66,28 @@ namespace uint384_lib:
         return (res, carry_d2)
     end
 
+    # Splits a field element in the range [0, 2^192) to its low 64-bit and high 128-bit parts.
+    func split_64{range_check_ptr}(a : felt) -> (low : felt, high : felt):
+        alloc_locals
+        local low : felt
+        local high : felt
+
+        %{
+            ids.low = ids.a & ((1<<64) - 1)
+            ids.high = ids.a >> 64
+        %}
+        assert a = low + high * HALF_SHIFT
+        assert [range_check_ptr + 0] = low
+        assert [range_check_ptr + 1] = HALF_SHIFT - 1 - low
+        assert [range_check_ptr + 2] = high
+        let range_check_ptr = range_check_ptr + 3
+        return (low, high)
+    end
+
     # Multiplies two integers. Returns the result as two 384-bit integers: the result has 2*384 bits,
     # the returned integers represent the lower 384-bits and the higher 384-bits, respectively.
     func mul{range_check_ptr}(a : Uint384, b : Uint384) -> (low : Uint384, high : Uint384):
         alloc_locals
-
         let (a0, a1) = split_64(a.d0)
         let (a2, a3) = split_64(a.d1)
         let (a4, a5) = split_64(a.d2)
@@ -100,6 +113,18 @@ namespace uint384_lib:
             high=Uint384(d0=res6 + HALF_SHIFT * res7, d1=res8 + HALF_SHIFT * res9, d2=res10 + HALF_SHIFT * carry))
     end
 
+    # Multiplies two integers. Returns the result as two 256-bit integers (low and high parts).
+    # func mul{range_check_ptr}(a : Uint384, b : Uint384) -> (low : Uint384, high : Uint384):
+    #     alloc_locals
+    #
+    #     let (res0, carry) = split_128(a.d0 * b.d0)
+    #     let (res1, carry) = split_128(a.d1 * b.d0 + a.d0 * b.d1 + carry)
+    #     let (res2, carry) = split_128(a.d2 * b.d0 + a.d1 * b.d1  + a.d0 * b.d2 + carry)
+    #     let (res3, carry) = split_128(a.d2 * b.d1 + a.d1 * b.d2  + carry)
+    #     let (res4, carry) = split_128(a.d2 * b.d2  + carry)
+    #     return (low=Uint384(d0=res0, d1=res1, d2 = res2), high=Uint384(d0=res3, d1=res4, d2=carry))
+    # end
+
     # Returns the floor value of the square root of a Uint384 integer.
     func sqrt{range_check_ptr}(a : Uint384) -> (res : Uint384):
         alloc_locals
@@ -113,7 +138,7 @@ namespace uint384_lib:
                 a = []
                 for _ in range(length):
                     a.append( num & ((1 << num_bits_shift) - 1) )
-                    num = num >> num_bits_shift 
+                    num = num >> num_bits_shift
                 return tuple(a)
 
             def pack(z, num_bits_shift: int) -> int:
@@ -232,13 +257,13 @@ namespace uint384_lib:
                 a = []
                 for _ in range(length):
                     a.append( num & ((1 << num_bits_shift) - 1) )
-                    num = num >> num_bits_shift 
+                    num = num >> num_bits_shift
                 return tuple(a)
 
             def pack(z, num_bits_shift: int) -> int:
                 limbs = (z.d0, z.d1, z.d2)
                 return sum(limb << (num_bits_shift * i) for i, limb in enumerate(limbs))
-                
+
             a = pack(ids.a, num_bits_shift = 128)
             div = pack(ids.div, num_bits_shift = 128)
             quotient, remainder = divmod(a, div)
@@ -355,7 +380,7 @@ namespace uint384_lib:
         return (1)
     end
 
-    # Return true if both integers are equal.
+    # Return true if a = 0
     func is_zero{range_check_ptr}(a : Uint384) -> (res : felt):
         let (is_a_zero) = eq(a, Uint384(0, 0, 0))
         if is_a_zero == 1:
@@ -374,8 +399,9 @@ namespace uint384_lib:
         return (Uint384(d0, d1, d2))
     end
 
-    # Computes the bitwise AND of 2 uint256 integers.
-    func and{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(a : Uint384, b : Uint384) -> (
+    # Computes the bitwise AND of 2 uint384 integers.
+    # NOTE: `and` will be a reserved word in future Cairo versions, so we cannot call this function `and`
+    func bit_and{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(a : Uint384, b : Uint384) -> (
             res : Uint384):
         let (d0) = bitwise_and(a.d0, b.d0)
         let (d1) = bitwise_and(a.d1, b.d1)
@@ -383,7 +409,7 @@ namespace uint384_lib:
         return (Uint384(d0, d1, d2))
     end
 
-    # Computes the bitwise OR of 2 uint256 integers.
+    # Computes the bitwise OR of 2 uint384 integers.
     func or{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(a : Uint384, b : Uint384) -> (
             res : Uint384):
         let (d0) = bitwise_or(a.d0, b.d0)

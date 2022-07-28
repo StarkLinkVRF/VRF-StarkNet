@@ -1,11 +1,12 @@
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin
+
+from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
 from starkware.cairo.common.cairo_secp.ec import EcPoint, ec_mul, ec_add, ec_negate
 from lib.hash_to_curve import hash_to_curve, get_generator
 from starkware.cairo.common.cairo_secp.bigint import BigInt3
 from starkware.cairo.common.uint256 import Uint256
 from lib.hash_points import hash_points
 
-func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
         public_key : EcPoint, alpha : Uint256, gamma_point : EcPoint, c : BigInt3, s : BigInt3) -> (
         is_valid : felt):
     alloc_locals

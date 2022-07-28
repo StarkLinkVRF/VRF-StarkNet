@@ -9,7 +9,7 @@ from starkware.cairo.common.cairo_secp.bigint import BigInt3
 
 @contract_interface
 namespace IRNGOracle:
-    func request_rng(request_id : felt):
+    func request_rng() -> (request_id : felt):
     end
 end
 
@@ -19,8 +19,8 @@ end
 
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        op_address : felt):
-    oracle_address.write(oracle_addr)
+        _oracle_address : felt):
+    oracle_address.write(_oracle_address)
 
     return ()
 end

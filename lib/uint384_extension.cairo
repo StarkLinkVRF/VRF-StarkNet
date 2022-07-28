@@ -162,7 +162,7 @@ namespace uint384_extension_lib:
         return (1)
     end
 
-    func and{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(a : Uint768, b : Uint768) -> (
+    func bit_and{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(a : Uint768, b : Uint768) -> (
             res : Uint768):
         let (d0) = bitwise_and(a.d0, b.d0)
         let (d1) = bitwise_and(a.d1, b.d1)
