@@ -13,7 +13,8 @@ from lib.field_arithmetic import field_arithmetic_lib
 from starkware.cairo.common.alloc import alloc
 from lib.uint384_extension import uint384_extension_lib
 from starkware.cairo.common.bitwise import bitwise_and
-from starkware.cairo.common.math import unsigned_div_rem
+from starkware.cairo.common.math import unsigned_div_rem, split_felt
+from starkware.cairo.common.hash import hash2
 
 func get_secp_modulus() -> (secp_modulus : Uint384): 
     return (
@@ -53,6 +54,22 @@ func split_128_bits{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(in : felt) -
     let (four_bytes) = bitwise_and(in, thirty_two_bits - 1)
     let (twelve_bytes, _) = unsigned_div_rem(in, thirty_two_bits)
     return (twelve_bytes, four_bytes)
+end
+
+
+func get_pedersen_hash{range_check_ptr, pedersen_ptr : HashBuiltin*}(
+        suite_string : felt, public_key : EcPoint, alpha : Uint256, ctr : felt) -> (res : felt):
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(suite_string, public_key.x.d0)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.x.d1)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.x.d2)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d0)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d1)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d2)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, alpha.low)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, alpha.high)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, ctr)
+
+    return (hash)
 end
 
 func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, keccak_ptr : felt*}(
@@ -158,13 +175,6 @@ func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(h
     let (success, beta) = field_arithmetic_lib.get_square_root(alpha, secp_modulus, generator)
 
     if success == 1:
-        # let (beta_is_zero) = uint384_lib.eq(beta, Uint384(d0=0,d1=0,d2=0))
-
-        # if beta_is_zero == 1:
-        #    return (success=1, res=EcPoint(x=x, y=beta))
-        # end
-        # let (secp_modulus) = get_secp_modulus()
-        # let (y) = uint384_lib.sub(secp_modulus, beta)
         let (_, beta_is_odd) = uint384_lib.unsigned_div_rem(beta, Uint384(d0=2, d1=0, d2=0))
 
         if beta_is_odd.d0 == 1:
@@ -228,32 +238,31 @@ func uint256ToUint384(in : Uint256) -> (out : Uint384):
     return (out=Uint384(d0=in.high, d1=in.low, d2=0))
 end
 
-func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, keccak_ptr : felt*}(
+func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256, ctrl : felt) -> (
         point_on_curve : EcPoint):
     alloc_locals
 
-    let (h_message) = hash_inputs{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, ctrl)
-    let (success, res) = arbitrary_string_to_point(h_message)
+    let (h_message) = get_pedersen_hash(suite_string, public_key, alpha, ctrl)
+    
+    let (high, low) = split_felt(h_message)
+    let as_uint256 = Uint256(low=low, high=high)
+    let (success, res) = arbitrary_string_to_point(as_uint256)
 
     if success == 1:
         return (res)
     end
 
-    let (res) = try_and_increment{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, ctrl + 1)
+    let (res) = try_and_increment(suite_string, public_key, alpha, ctrl + 1)
 
     return (res)
 end
 
-func hash_to_curve{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+func hash_to_curve{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256) -> (point_on_curve : EcPoint):
     alloc_locals
 
-    let (local keccak_ptr_start) = alloc()
-    let keccak_ptr = keccak_ptr_start
-
-    let (res) = try_and_increment{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, 0)
-    finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
+    let (res) = try_and_increment(suite_string, public_key, alpha, 0)
     return (res)
 end
 

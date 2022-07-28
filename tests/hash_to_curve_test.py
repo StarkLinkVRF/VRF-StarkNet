@@ -26,7 +26,7 @@ async def test_hash_to_fp(hash_to_curve_factory):
    print(y)
 
    # alpha is uint 256 - keccak of 012345
-   alpha_string = 'aa4ba4b304228a9d05087e147c9e86d84c708bbbe62bb35b28dab74492f6c726'
+   alpha_string  =    '88c636879a1d6644cea4be942694b0b75a1554299249bdf92ab8edb528c96ca6'
    alpha = bytes.fromhex(alpha_string)
    # 1 byte
    ctr_string = '01'
@@ -52,7 +52,7 @@ async def test_hash_to_fp(hash_to_curve_factory):
       suite, (x, y), alpha, ctr
    ).call()
 
-
+   print(test_keccak_call)
    hash = test_keccak_call.result[0]
 
    res = hash.low.to_bytes(16, 'little').hex() + hash.high.to_bytes(16, 'little').hex()

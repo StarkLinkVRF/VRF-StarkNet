@@ -1,5 +1,7 @@
 %lang starknet
 
+%builtins pedersen range_check bitwise
+
 from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
 from starkware.cairo.common.cairo_secp.ec import EcPoint
 from starkware.cairo.common.cairo_secp.bigint import BigInt3
@@ -14,7 +16,7 @@ func _hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
 
     let (local keccak_ptr_start) = alloc()
     let keccak_ptr = keccak_ptr_start
-    let (res) = hash_inputs{keccak_ptr=keccak_ptr}(suite_string, public_key, alpha, ctr)
+    let (res) = hash_inputs(suite_string, public_key, alpha, ctr)
 
     #finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
 
@@ -22,7 +24,7 @@ func _hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
 end
 
 @view
-func _hash_to_curve{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+func _hash_to_curve{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
         suite_string : felt, public_key : EcPoint, alpha : Uint256) -> (res : EcPoint):
     alloc_locals
 
