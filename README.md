@@ -6,8 +6,9 @@ A VRF oracle on StarkNet based on the [Internet Research Task Force vrf-spec-05]
 The client to respond to rng requests is [here](https://github.com/0xNonCents/vrf-client-starknet-rs)
 
 ----
+[Testnet VRF Oracle](https://goerli.voyager.online/contract/0x0746077cd8eb9cce682daf051bb1fec88f3ba7c6e75e2413bb09a210ab9a2514#writeContract)
 
-[Example Dice roll transaction](https://goerli.voyager.online/tx/0x176ccd696901a2b016579764eda165e42073eb36a2daf9787c848e5ba455fe2#events)
+[Example VRF Consumer](https://goerli.voyager.online/contract/0x039ba117523ce21318c4c39eb58b3c9789a03199afdfb777a2be7672dc8499f6#writeContract)
 
 Call `request_rng` on the Dice Game contract
 
