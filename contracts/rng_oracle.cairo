@@ -88,7 +88,7 @@ func request_rng{
     let (caller_address) = get_caller_address()
     let (curr_index) = request_index.read()
 
-    let (alpha : felt) = hash2{hash_ptr=pedersen_ptr}(curr_index, caller_address)
+    let (alpha : felt) = hash2{hash_ptr=pedersen_ptr}(curr_index, 0)
 
     requests.write(curr_index, Request(callback_address=caller_address, alpha=alpha, public_key_hash=public_key_hash))
     request_index.write(curr_index + 1)
