@@ -11,6 +11,7 @@ from starkware.cairo.common.cairo_secp.bigint import BigInt3
 from starkware.cairo.common.math import assert_not_equal
 from lib.verify import verify
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.hash import hash2
 
 @contract_interface
 namespace IRNGConsumer:
@@ -23,7 +24,8 @@ end
 
 struct Request:
     member callback_address : felt
-    member alpha : Uint256
+    member alpha : felt
+    member public_key_hash : felt
 end
 
 @storage_var
@@ -38,18 +40,12 @@ end
 func completed_requests(index : felt) -> (is_complete : felt):
 end
 
-@storage_var
-func public_key() -> (index : EcPoint):
-end
-
 @event
-func request_recieved(request_index : felt):
+func request_recieved(request_index : felt, pub_key_hash : felt):
 end
 
 @constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _public_key : EcPoint):
-    public_key.write(_public_key)
+func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
     request_index.write(1)
     return ()
 end
@@ -58,16 +54,23 @@ end
 func resolve_rng_request{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,
         bitwise_ptr : BitwiseBuiltin*}(
-        request_index : felt, gamma_point : EcPoint, c : BigInt3, s : BigInt3):
+        request_index : felt, gamma_point : EcPoint, c : BigInt3, s : BigInt3, public_key : EcPoint):
     alloc_locals
 
     let (is_complete : felt) = completed_requests.read(request_index)
     assert_not_equal(is_complete, 1)
 
-    let (_public_key : EcPoint) = public_key.read()
     let (request : Request) = requests.read(request_index)
 
-    verify(_public_key, request.alpha, gamma_point, c, s)
+    let (hash : felt) = hash2{hash_ptr=pedersen_ptr}(public_key.x.d0, public_key.x.d1) 
+    let (hash : felt) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.x.d2) 
+    let (hash : felt) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d0)
+    let (hash : felt) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d1)
+    let (hash : felt) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d2) 
+
+    assert request.public_key_hash = hash
+
+    verify(public_key, request.alpha, gamma_point, c, s)
 
     IRNGConsumer.will_recieve_rng(
         contract_address=request.callback_address, rng=c, request_id=request_index)
@@ -80,29 +83,21 @@ end
 @external
 func request_rng{
         syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,
-        bitwise_ptr : BitwiseBuiltin*}() -> (request_id : felt):
+        bitwise_ptr : BitwiseBuiltin*}(public_key_hash : felt) -> (request_id : felt):
     alloc_locals
     let (caller_address) = get_caller_address()
     let (curr_index) = request_index.read()
 
-    let (local keccak_ptr_start) = alloc()
-    let keccak_ptr = keccak_ptr_start
-    let inputs : felt* = alloc()
+    let (alpha : felt) = hash2{hash_ptr=pedersen_ptr}(curr_index, caller_address)
 
-    [inputs] = curr_index
-
-    let (h_string : Uint256) = keccak_felts_bigend{keccak_ptr=keccak_ptr}(
-        n_elements=1, elements=inputs)
-    let (alpha : Uint256) = uint256_reverse_endian(h_string)
-    finalize_keccak(keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr)
-
-    requests.write(curr_index, Request(callback_address=caller_address, alpha=alpha))
+    requests.write(curr_index, Request(callback_address=caller_address, alpha=alpha, public_key_hash=public_key_hash))
     request_index.write(curr_index + 1)
 
-    request_recieved.emit(request_index=curr_index)
+    request_recieved.emit(request_index=curr_index, pub_key_hash=public_key_hash)
 
     return (curr_index)
 end
+
 
 @view
 func get_request{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(

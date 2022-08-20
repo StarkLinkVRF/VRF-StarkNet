@@ -3,6 +3,7 @@ from starkware.cairo.common.hash_state import compute_hash_on_elements
 from starkware.crypto.signature.signature import private_to_stark_key, sign
 from starkware.starknet.public.abi import get_selector_from_name
 from typing import List, Callable
+from starkware.crypto.signature import fast_pedersen_hash
 
 class Signer():
     """
@@ -70,3 +71,16 @@ def pack(z, num_bits_shift: int = 128) -> int:
 bytes_to_int_little: Callable[[bytes], int] = lambda word: int.from_bytes(word, "little")
 
 bytes_32_to_uint_256_little : Callable[[bytes], tuple] = lambda word : split(bytes_to_int_little(word), 128, 2)
+
+
+def pedersen_hash_point(x, y):
+    split_x = split(x, 86,3)
+    split_y = split(y, 86,3)
+
+    hash = fast_pedersen_hash.pedersen_hash(split_x[0], split_x[1])
+    hash = fast_pedersen_hash.pedersen_hash(hash, split_x[2])
+    hash = fast_pedersen_hash.pedersen_hash(hash, split_y[0])
+    hash = fast_pedersen_hash.pedersen_hash(hash, split_y[1])
+    hash = fast_pedersen_hash.pedersen_hash(hash, split_y[2])
+    
+    return hash
