@@ -15,6 +15,7 @@ func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashB
     let suite_string = 254
     let (H) = hash_to_curve(suite_string, public_key, alpha)
 
+    
     let (B) = get_generator()
     let (s_mul_B) = ec_mul(B, s)
 
@@ -29,6 +30,7 @@ func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashB
 
     let (V) = ec_add(s_mul_H, negated_c_mul_gamma)
 
+    
     let (_c) = hash_points(H, gamma_point, U, V)
 
     assert _c.high = c.d0 + c.d1 * 2 ** 86

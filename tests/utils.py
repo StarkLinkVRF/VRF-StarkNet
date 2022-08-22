@@ -84,3 +84,14 @@ def pedersen_hash_point(x, y):
     hash = fast_pedersen_hash.pedersen_hash(hash, split_y[2])
     
     return hash
+
+def pedersen_hash_list(input):
+    hash = fast_pedersen_hash.pedersen_hash(input[0], input[1])
+
+    for i in range(len(input)):
+        if i == 0:
+            hash =input[i]
+        else:
+            hash = fast_pedersen_hash.pedersen_hash(hash, input[i])
+    
+    return hash

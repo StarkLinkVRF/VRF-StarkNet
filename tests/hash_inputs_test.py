@@ -1,10 +1,10 @@
 import pytest
 from web3 import Web3
-from utils import bytes_32_to_uint_256_little, bytes_32_to_uint_256_little, split, pack
+from utils import bytes_32_to_uint_256_little, bytes_32_to_uint_256_little, split, pack, pedersen_hash_list
 
 
 @pytest.mark.asyncio
-async def test_hash_to_fp(hash_to_curve_factory):
+async def test_hash_inputs(hash_to_curve_factory):
    contract = hash_to_curve_factory
    
    print("empty keccak ", Web3.keccak(b'').hex()[2:])
@@ -26,41 +26,24 @@ async def test_hash_to_fp(hash_to_curve_factory):
    print(y)
 
    # alpha is uint 256 - keccak of 012345
-   alpha_string  =    '88c636879a1d6644cea4be942694b0b75a1554299249bdf92ab8edb528c96ca6'
+   alpha_string  =    '88c6'
    alpha = bytes.fromhex(alpha_string)
    # 1 byte
    ctr_string = '01'
    ctr = bytes.fromhex(ctr_string)
-   # 1 bytes
-   one_string  = bytes.fromhex('01')
 
-   input_bytes = suite + one_string + y + x + alpha + ctr  
-
-   print(len(input_bytes))
-   print(input_bytes.hex())
-   py_res = Web3.keccak(input_bytes)
-   
    suite =int(suite_string, 16)
-   x = split(int(x_string, 16), 86)
-   y = split(y_num, 86)
-   alpha = split(int(alpha_string, 16), 128, 2)
+   x = split(int(x_string, 16), 86, as_list=True)
+   y = split(y_num, 86, as_list=True)
+   alpha = int(alpha_string, 16)
    ctr = int(ctr_string, 16)
-   
-   print('split x' , x)
-   print(pack(x, 86))
-   test_keccak_call = await contract._hash_inputs(
-      suite, (x, y), alpha, ctr
+
+
+   test_pedersen_call = await contract._hash_inputs(
+      suite, (tuple(x), tuple(y)), alpha, ctr
    ).call()
 
-   print(test_keccak_call)
-   hash = test_keccak_call.result[0]
 
-   res = hash.low.to_bytes(16, 'little').hex() + hash.high.to_bytes(16, 'little').hex()
-
-   padded = 2 + hash.low * 2 ** 8 + hash.high * 2 ** (8 + 128)
-
-   print(padded.to_bytes(33, 'little').hex())
-   print(res)
-   assert py_res.hex()[2:] ==  res
+   assert test_pedersen_call.result[0] ==  pedersen_hash_list([suite] + x + y + [alpha, ctr])
 
    
