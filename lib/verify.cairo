@@ -7,7 +7,7 @@ from starkware.cairo.common.uint256 import Uint256
 from lib.hash_points import hash_points
 
 func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
-        public_key : EcPoint, alpha : Uint256, gamma_point : EcPoint, c : BigInt3, s : BigInt3) -> (
+        public_key : EcPoint, alpha : felt, gamma_point : EcPoint, c : BigInt3, s : BigInt3) -> (
         is_valid : felt):
     alloc_locals
 
@@ -15,6 +15,7 @@ func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashB
     let suite_string = 254
     let (H) = hash_to_curve(suite_string, public_key, alpha)
 
+    
     let (B) = get_generator()
     let (s_mul_B) = ec_mul(B, s)
 
@@ -29,6 +30,7 @@ func verify{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashB
 
     let (V) = ec_add(s_mul_H, negated_c_mul_gamma)
 
+    
     let (_c) = hash_points(H, gamma_point, U, V)
 
     assert _c.high = c.d0 + c.d1 * 2 ** 86

@@ -15,6 +15,7 @@ VERIFIER_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/test_u
 RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
 DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
 HASH_CONTRACT = os.path.join("contracts", "test_utils", "rng_hash.cairo")
+CONVERSIONS_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/test_utils/conversions.cairo")
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -58,34 +59,33 @@ async def hash_factory(starknet_factory):
     return hash_contract
 
 @pytest.fixture(scope="module")
-async def verifier_factory(starknet_factory):
+async def conversions_factory(starknet_factory):
     starknet = starknet_factory
 
-    
     # Deploy the account contract
     contract_class = compile_starknet_files(
-        files=[VERIFIER_CONTRACT], disable_hint_validation=True
+        files=[CONVERSIONS_CONTRACT], disable_hint_validation=True
     )
-    verifier_contract = await starknet.deploy(contract_class=contract_class)
+    return await starknet.deploy(contract_class=contract_class)
 
-    return verifier_contract
+    
 
 
 RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
 DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
 
-async def deploy_contracts(starknet, public_key : list):
+async def deploy_contracts(starknet, public_key_hash):
 
     contract_class = compile_starknet_files(
         files=[RNG_ORACLE_CONTRACT], disable_hint_validation=True
     )
 
-    print("public key ", public_key)
-    rng_oracle_contract = await starknet.deploy(contract_class=contract_class,  constructor_calldata=public_key)
-    print("rng_oracle_contract.contract_address ", hex(rng_oracle_contract.contract_address))
+    rng_oracle_contract = await starknet.deploy(contract_class=contract_class)
+    
     contract_class = compile_starknet_files(
         files=[DICE_CONTRACT], disable_hint_validation=True
     )
-    rng_consumer_contract = await starknet.deploy(contract_class=contract_class, constructor_calldata=[rng_oracle_contract.contract_address])
+    rng_consumer_contract = await starknet.deploy(contract_class=contract_class, constructor_calldata=[rng_oracle_contract.contract_address, public_key_hash])
 
     return rng_oracle_contract, rng_consumer_contract
+

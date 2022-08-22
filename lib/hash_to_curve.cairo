@@ -58,95 +58,17 @@ end
 
 
 func get_pedersen_hash{range_check_ptr, pedersen_ptr : HashBuiltin*}(
-        suite_string : felt, public_key : EcPoint, alpha : Uint256, ctr : felt) -> (res : felt):
+        suite_string : felt, public_key : EcPoint, alpha : felt, ctr : felt) -> (res : felt):
     let (hash) = hash2{hash_ptr=pedersen_ptr}(suite_string, public_key.x.d0)
     let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.x.d1)
     let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.x.d2)
     let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d0)
     let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d1)
     let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, public_key.y.d2)
-    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, alpha.low)
-    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, alpha.high)
+    let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, alpha)
     let (hash) = hash2{hash_ptr=pedersen_ptr}(hash, ctr)
 
     return (hash)
-end
-
-func hash_inputs{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, keccak_ptr : felt*}(
-        suite_string : felt, public_key : EcPoint, alpha : Uint256, ctr : felt) -> (res : Uint256):
-    alloc_locals
-    let (y_as_uint384) = bigint3_to_uint384(public_key.y)
-    let (_, y_mod_2) = uint384_lib.unsigned_div_rem(y_as_uint384, Uint384(d0=2, d1=0, d2=0))
-
-    let y_octet = y_mod_2.d0 + 2
-
-    let (pk_string_one : felt, pk_string_two : felt, pk_string_three : felt, pk_string_four : felt,
-        pk_string_five : felt, pk_string_six : felt) = BigInt3_to_64bit(public_key.x)
-
-    let one_string = 1
-
-    let h_string : felt* = alloc()
-
-    # h_string = Hash(suite_string || one_string || PK_string ||alpha_string)
-
-    let (str_two_five_bytes, str_two_three_bytes) = split_64_bits(pk_string_four)
-    let (str_three_five_bytes, str_three_three_bytes) = split_64_bits(pk_string_three)
-
-    # TODO remove pk_string_one, it will always be zero!
-    # pk_string_one is one byte long
-    # each 64 bit segment is split into (3 and 5 bytes) and then are recombined
-    # suite_string || one_string || y_octet || pk_string_first_byte || five_bytes_pk_string_two| three_bytes_pk_string_two || five_bytes_pk_string_three...
-    let first_64_bits = str_two_five_bytes + pk_string_one * 2 ** 32 + y_octet * 2 ** 40 + one_string * 2 ** 48 + suite_string * 2 ** 56
-    let second_64_bits = str_three_five_bytes + str_two_three_bytes * 2 ** 32
-
-    let p1 = first_64_bits * 2 ** 64 + second_64_bits
-
-    let (str_five_five_bytes, str_five_three_bytes) = split_64_bits(pk_string_five)
-    let (str_six_five_bytes, str_six_three_bytes) = split_64_bits(pk_string_six)
-
-    let third_64_bits = str_five_five_bytes + str_three_three_bytes * 2 ** 32
-    let fourth_64_bits = str_six_five_bytes + str_five_three_bytes * 2 ** 32
-
-    let p2 = third_64_bits * 2 ** 64 + fourth_64_bits
-
-    let (alpha_high_thirteen_bytes, alpha_high_three_bytes) = split_128_bits(alpha.high)
-
-    let p3 = alpha_high_thirteen_bytes + str_six_three_bytes * 2 ** 96
-
-    let (alpha_low_thirteen_bytes, alpha_low_three_bytes) = split_128_bits(alpha.low)
-
-    let p4 = alpha_low_thirteen_bytes + alpha_high_three_bytes * 2 ** 96
-
-    let p5 = ctr + alpha_low_three_bytes * 2 ** 8
-
-    let (p1_reverse) = word_reverse_endian(p1)
-    let (p1_2, p1_1) = unsigned_div_rem(p1_reverse, 2 ** 64)
-    assert [h_string] = p1_1
-    assert [h_string + 1] = p1_2
-
-    let (p2_reverse) = word_reverse_endian(p2)
-    let (p2_2, p2_1) = unsigned_div_rem(p2_reverse, 2 ** 64)
-    assert [h_string + 2] = p2_1
-    assert [h_string + 3] = p2_2
-
-    let (p3_reverse) = word_reverse_endian(p3)
-    let (p3_2, p3_1) = unsigned_div_rem(p3_reverse, 2 ** 64)
-    assert [h_string + 4] = p3_1
-    assert [h_string + 5] = p3_2
-
-    let (p4_reverse) = word_reverse_endian(p4)
-    let (p4_2, p4_1) = unsigned_div_rem(p4_reverse, 2 ** 64)
-    assert [h_string + 6] = p4_1
-    assert [h_string + 7] = p4_2
-
-    let (p5_reverse) = word_reverse_endian(p5)
-    let (p5_2, p5_1) = unsigned_div_rem(p5_reverse, 2 ** 88)
-    assert [h_string + 8] = p5_2
-
-    let (h_string_final : Uint256) = keccak{keccak_ptr=keccak_ptr}(inputs=h_string, n_bytes=69)
-
-    let (big_end_h_string : Uint256) = uint256_reverse_endian(h_string_final)
-    return (big_end_h_string)
 end
 
 const gx1 = 17117865558768631194064792
@@ -161,11 +83,12 @@ func get_generator() -> (res : EcPoint):
     return (res=EcPoint(x=BigInt3(d0=gx1, d1=gx2, d2=gx3), y=BigInt3(d0=gy1, d1=gy2, d2=gy3)))
 end
 
-func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(hash : Uint256) -> (
+func arbitrary_string_to_point{range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(hash : felt) -> (
         success : felt, res : EcPoint):
     alloc_locals
     # Appends two at 256 bit
-    let x_p = Uint384(d0=hash.low, d1=hash.high, d2=0)
+    let (high, low) = split_felt(hash)
+    let x_p = Uint384(d0=low, d1=high, d2=0)
 
     let (secp_modulus) = get_secp_modulus()
     let (x_cubed) = field_arithmetic_lib.pow(x_p, Uint384(d0=3, d1=0, d2=0), secp_modulus)
@@ -239,15 +162,13 @@ func uint256ToUint384(in : Uint256) -> (out : Uint384):
 end
 
 func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
-        suite_string : felt, public_key : EcPoint, alpha : Uint256, ctrl : felt) -> (
+        suite_string : felt, public_key : EcPoint, alpha : felt, ctrl : felt) -> (
         point_on_curve : EcPoint):
     alloc_locals
 
-    let (h_message) = get_pedersen_hash(suite_string, public_key, alpha, ctrl)
+    let (h_message : felt) = get_pedersen_hash(suite_string, public_key, alpha, ctrl)
     
-    let (high, low) = split_felt(h_message)
-    let as_uint256 = Uint256(low=low, high=high)
-    let (success, res) = arbitrary_string_to_point(as_uint256)
+    let (success, res) = arbitrary_string_to_point(h_message)
 
     if success == 1:
         return (res)
@@ -259,7 +180,7 @@ func try_and_increment{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_
 end
 
 func hash_to_curve{range_check_ptr, bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*}(
-        suite_string : felt, public_key : EcPoint, alpha : Uint256) -> (point_on_curve : EcPoint):
+        suite_string : felt, public_key : EcPoint, alpha : felt) -> (point_on_curve : EcPoint):
     alloc_locals
 
     let (res) = try_and_increment(suite_string, public_key, alpha, 0)
