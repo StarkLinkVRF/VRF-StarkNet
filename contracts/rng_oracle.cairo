@@ -151,7 +151,10 @@ func request_rng{
     let (amount) = fee_amount.read()
     let (token_address) = fee_address.read()
 
-    IERC20.transferFrom(token_address, caller_address, beacon_address, amount)
+    let (fee_is_not_zero) = uint256_lt(Uint256(0, 0), amount)
+    if fee_is_not_zero == 1:
+        IERC20.transferFrom(token_address, caller_address, beacon_address, amount)
+    end
 
     let (curr_index) = request_index.read()
 
