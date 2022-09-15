@@ -12,8 +12,8 @@ from starkware.cairo.common.math import assert_not_equal
 from lib.verify import verify
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.hash import hash2
-from openzeppelin.access.ownable.library import Ownable
-from openzeppelin.token.erc20.IERC20 import IERC20
+from lib.openzeppelin.ownable import Ownable
+from lib.openzeppelin.IERC20 import IERC20
 
 @contract_interface
 namespace IRNGConsumer {
@@ -150,17 +150,19 @@ func request_rng{
     let (caller_address) = get_caller_address();
     let (public_key_hash) = recievable_beacons.read(beacon_address);
     let (amount) = fee_amount.read();
-    let (token_address) = fee_address.read();
 
     let (fee_is_not_zero) = uint256_lt(Uint256(0, 0), amount);
 
     if (fee_is_not_zero == 1) {
+        let (token_address) = fee_address.read();
         IERC20.transferFrom(token_address, caller_address, beacon_address, amount);
         tempvar syscall_ptr = syscall_ptr;
         tempvar range_check_ptr = range_check_ptr;
+        tempvar pedersen_ptr = pedersen_ptr;
     } else {
         tempvar syscall_ptr = syscall_ptr;
         tempvar range_check_ptr = range_check_ptr;
+        tempvar pedersen_ptr = pedersen_ptr;
     }
 
     let (curr_index) = request_index.read();
