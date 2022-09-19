@@ -1,6 +1,9 @@
 import os
 import sys
 from nile import nre
+
+
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..')) 
 def run(nre : nre.NileRuntimeEnvironment):
     # arguments oracle_addr : felt, _beacon_address : felt
