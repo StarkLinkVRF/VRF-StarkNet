@@ -18,7 +18,6 @@ pub_key_y = 54612086558330151575502245117328292006508190407150947628010935769662
 
 public_key_hash = pedersen_hash_point(pub_key_x, pub_key_y)
 
-@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_registering_beacon(contract_mocks):
     starknet, oracle_contract, dice, owner, not_owner = contract_mocks
