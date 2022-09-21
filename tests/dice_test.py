@@ -1,7 +1,5 @@
 import pytest
 
-from conftest import deploy_contracts
-from conftest import dice_init, oracle_init
 from signers import MockSigner
 from utils import split, pedersen_hash_point
 
@@ -24,8 +22,6 @@ async def test_registering_beacon(contract_mocks):
     exec_info = await signer.send_transaction(owner, oracle_contract.contract_address, 'set_beacon_public_key_hash', [public_key_hash])
 
     res = await oracle_contract.get_beacon_hash(owner.contract_address).call()
-
-    print("res ", res.result)
 
     assert res.result[0] == public_key_hash
 

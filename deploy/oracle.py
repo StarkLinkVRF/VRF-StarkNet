@@ -9,7 +9,7 @@ def run(nre : nre.NileRuntimeEnvironment):
     fee_amount_high =  "0"
 
     #set your address here
-    owner_address = "0x0266ED55bE7054c74dB3f8Ec2e79c728056c802A11481FAD0e91220139B8916A"
+    owner_address = "0x4f33db6182529b2b18118b5a2a809c32b0cb41437526fe4660520b998c222a5"
     
     address, abi = nre.deploy(contract="rng_oracle", alias="rng_oracle", arguments=[fee_address, fee_amount_low, fee_amount_high, owner_address])
     print(abi, address)

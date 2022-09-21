@@ -1,5 +1,6 @@
 /artifacts
 accounts.json
+*.accounts.json
 *.pyc
 *.deployments.txt
 .env
