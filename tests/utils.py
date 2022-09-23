@@ -1,9 +1,45 @@
 
+import os
+from pathlib import Path
 from starkware.cairo.common.hash_state import compute_hash_on_elements
 from starkware.crypto.signature.signature import private_to_stark_key, sign
 from starkware.starknet.public.abi import get_selector_from_name
 from typing import List, Callable
 from starkware.crypto.signature import fast_pedersen_hash
+from starkware.starknet.testing.starknet import Starknet
+from starkware.starknet.compiler.compile import compile_starknet_files
+
+_root = Path(__file__).parent.parent
+
+def contract_path(name):
+    if name.startswith("tests/"):
+        return str(_root / name)
+    else:
+        return str(_root / "src" / name)
+
+def _get_path_from_name(name):
+    """Return the contract path by contract name."""
+    dirs = ["src", "tests/mocks", "lib"]
+    for dir in dirs:
+        for (dirpath, _, filenames) in os.walk(dir):
+            for file in filenames:
+                if file == f"{name}.cairo":
+                    return os.path.join(dirpath, file)
+
+    raise FileNotFoundError(f"Cannot find '{name}'.")
+    
+def get_contract_class(contract, is_path=False):
+    """Return the contract class from the contract name or path"""
+    if is_path:
+        path = contract_path(contract)
+    else:
+        path = _get_path_from_name(contract)
+
+    contract_class = compile_starknet_files(
+        files=[path],
+        debug_info=True
+    )
+    return contract_class
 
 class Signer():
     """
@@ -41,6 +77,41 @@ class Signer():
         sig_r, sig_s = self.sign(message_hash)
 
         return await account.execute(to, selector, calldata, nonce).invoke(signature=[sig_r, sig_s])
+
+class State:
+    """
+    Utility helper for Account class to initialize and return StarkNet state.
+    Example
+    ---------
+    Initalize StarkNet state
+    >>> starknet = await State.init()
+    """
+    async def init():
+        global starknet
+        starknet = await Starknet.empty()
+        return starknet
+
+class Account:
+    """
+    Utility for deploying Account contract.
+    Parameters
+    ----------
+    public_key : int
+    Examples
+    ----------
+    >>> starknet = await State.init()
+    >>> account = await Account.deploy(public_key)
+    """
+    get_class = get_contract_class("Account")
+
+    async def deploy(public_key, starknet):
+        account = await starknet.deploy(
+            contract_class=Account.get_class,
+            constructor_calldata=[public_key]
+        )
+        return account
+
+
 
 def hash_message(sender, to, selector, calldata, nonce):
     message = [
@@ -95,3 +166,4 @@ def pedersen_hash_list(input):
             hash = fast_pedersen_hash.pedersen_hash(hash, input[i])
     
     return hash
+

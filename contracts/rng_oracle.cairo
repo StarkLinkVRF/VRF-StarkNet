@@ -196,3 +196,12 @@ func get_request{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
     let (request) = requests.read(request_id);
     return (request,);
 }
+
+
+@view
+func get_beacon_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    beacon_address: felt
+) -> (public_key_hash: felt) {
+    let (public_key_hash) = recievable_beacons.read(beacon_address);
+    return (public_key_hash,);
+}
