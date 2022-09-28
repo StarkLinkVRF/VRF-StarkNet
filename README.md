@@ -8,7 +8,7 @@ The client to respond to rng requests is [here](https://github.com/0xNonCents/vr
 ----
 ## Deployments
 
-Oracle \
+VRF \
 [TestNet](https://goerli.voyager.online/contract/0x00f6c3362fd1ffefe6f7177acb6c0574207629ce7d2ddf2f91ea8e740b1327bb) \
 [MainNet](https://goerli.voyager.online/contract/0x03eb948750baa18c8732f306171f616aa003afabf00ee9e543d9747fcdccfe4b)
 
