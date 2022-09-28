@@ -6,15 +6,15 @@ A VRF oracle on StarkNet based on the [Internet Research Task Force vrf-spec-05]
 The client to respond to rng requests is [here](https://github.com/0xNonCents/vrf-client-starknet-rs)
 
 ----
-[Testnet VRF Oracle](https://goerli.voyager.online/contract/0x0746077cd8eb9cce682daf051bb1fec88f3ba7c6e75e2413bb09a210ab9a2514#writeContract)
+## Deployments
 
-[Example VRF Consumer](https://goerli.voyager.online/contract/0x039ba117523ce21318c4c39eb58b3c9789a03199afdfb777a2be7672dc8499f6#writeContract)
+Oracle \
+[TestNet](https://goerli.voyager.online/contract/0x00f6c3362fd1ffefe6f7177acb6c0574207629ce7d2ddf2f91ea8e740b1327bb) \
+[MainNet](https://goerli.voyager.online/contract/0x03eb948750baa18c8732f306171f616aa003afabf00ee9e543d9747fcdccfe4b)
 
-Call `request_rng` on the Dice Game contract
-
-Then `resolve_rng_requests` on the Oracle contract
-
-Wait for details of `resolve_rng_requests` to be posted on chain
+Example App \
+[TestNet](https://goerli.voyager.online/contract/0x0022d096be050d5838e5ff81f50151eab61affaee5e95dabe3455afebc68c248) \
+[MainNet](https://goerli.voyager.online/contract/0x03e3927d75dc47e1376ae04ace262ca21fe42aeda5dcc7672f411c3246ed5684)
 
 ---
 
