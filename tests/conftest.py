@@ -15,7 +15,7 @@ from signers import MockSigner
 
 HASH_TO_CURVE_CONTRACT = os.path.join("contracts", "test_utils", "hash_to_curve.cairo")
 VERIFIER_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/test_utils/verify.cairo")
-RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
+RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/starklink_randomness.cairo")
 DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
 HASH_CONTRACT = os.path.join("contracts", "test_utils", "rng_hash.cairo")
 CONVERSIONS_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/test_utils/conversions.cairo")
@@ -74,7 +74,7 @@ async def conversions_factory(starknet_factory):
     
 
 
-RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/rng_oracle.cairo")
+RNG_ORACLE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/starklink_randomness.cairo")
 DICE_CONTRACT = os.path.join(os.path.dirname(__file__), "../contracts/examples/dice.cairo")
 
 async def deploy_contracts(starknet, public_key_hash, fee_address=0, fee_amount_high=0, fee_amount_low=0):

@@ -36,7 +36,7 @@ async def test_resolve_rng_request(contract_mocks):
     await signer.send_transaction(owner, oracle_contract.contract_address, 'set_beacon_public_key_hash', [public_key_hash])
 
     # make rng request
-    request_id = await dice_contract.request_rng().execute()
+    request_id = await dice_contract.request_randomness().execute()
     request_index = request_id.result[0]
 
     alpha_string = 'f60cfab7e2cb9f2d73b0c2fa4a4bf40c326a7e71fdcdee263b071276522d0eb1'
@@ -50,7 +50,7 @@ async def test_resolve_rng_request(contract_mocks):
     c = split(c_int, 86)
     s_int = 66059766962945066339229879380846298561887058815503918374418128665360925700716
     s = split(s_int, 86)
-    await oracle_contract.resolve_rng_request(request_index, gamma_point, c, s,(split(pub_key_x, 86, 3), split(pub_key_y, 86, 3))).execute()    
+    await oracle_contract.resolve_randomness_request(request_index, gamma_point, c, s,(split(pub_key_x, 86, 3), split(pub_key_y, 86, 3))).execute()    
     latest_rng = await dice_contract.get_roll_result(request_index).call()
     assert latest_rng.result[0] > 0 & latest_rng.result[0] <= 6
 

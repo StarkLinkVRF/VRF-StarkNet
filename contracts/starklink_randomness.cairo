@@ -16,11 +16,11 @@ from lib.openzeppelin.ownable import Ownable
 from lib.openzeppelin.IERC20 import IERC20
 
 @contract_interface
-namespace IRNGConsumer {
-    func request_rng() {
+namespace IRandomnessConsumer {
+    func request_randomness() {
     }
 
-    func will_recieve_rng(rng: BigInt3, request_id: felt) {
+    func will_receive_randomness(rng: BigInt3, request_id: felt) {
     }
 }
 
@@ -55,7 +55,7 @@ func recievable_beacons(recievable_address: felt) -> (public_key_hash: felt) {
 }
 
 @event
-func request_recieved(request_index: felt, pub_key_hash: felt) {
+func request_received(request_index: felt, pub_key_hash: felt) {
 }
 
 @constructor
@@ -112,7 +112,7 @@ func set_fee_token{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
 }
 
 @external
-func resolve_rng_request{
+func resolve_randomness_request{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*
 }(request_index: felt, gamma_point: EcPoint, c: BigInt3, s: BigInt3, public_key: EcPoint) {
     alloc_locals;
@@ -132,7 +132,7 @@ func resolve_rng_request{
 
     verify(public_key, request.alpha, gamma_point, c, s);
 
-    IRNGConsumer.will_recieve_rng(
+    IRandomnessConsumer.will_receive_randomness(
         contract_address=request.callback_address, rng=c, request_id=request_index
     );
 
@@ -142,7 +142,7 @@ func resolve_rng_request{
 }
 
 @external
-func request_rng{
+func request_randomness{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*
 }(beacon_address: felt) -> (request_id: felt) {
     alloc_locals;
@@ -175,7 +175,7 @@ func request_rng{
     );
     request_index.write(curr_index + 1);
 
-    request_recieved.emit(request_index=curr_index, pub_key_hash=public_key_hash);
+    request_received.emit(request_index=curr_index, pub_key_hash=public_key_hash);
 
     return (curr_index,);
 }
